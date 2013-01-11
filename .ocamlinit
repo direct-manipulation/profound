@@ -1,0 +1,9 @@
+let __sys_int = !Sys.interactive ;;
+Sys.interactive := false ;;
+#use "topfind" ;;
+#require "unix" ;;
+#require "pcre" ;;
+#require "lablgtk2" ;;
+#directory "_build" ;;
+Sys.interactive := __sys_int ;;
+#load "profound.cma" ;;
