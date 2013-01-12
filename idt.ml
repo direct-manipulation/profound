@@ -4,13 +4,16 @@
 (* See LICENSE for licensing details.                                         *)
 (******************************************************************************)
 
-module Must = struct
-  include Idt
-  include Syntax
-end
+type t = string
 
-let () =
-  if not !Sys.interactive then
-    Printf.eprintf "Hello, world.\n"
-  else
-    Printf.printf "Profound %s [%s]\n" Version.str Version.built
+let stab : (string, t) Hashtbl.t = Hashtbl.create 19
+
+let intern (s : string) : t =
+  try Hashtbl.find stab s with
+  | Not_found ->
+      Hashtbl.replace stab s s ;
+      s
+
+let rep s = s
+
+let clear () = Hashtbl.clear stab

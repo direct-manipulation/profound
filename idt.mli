@@ -4,13 +4,11 @@
 (* See LICENSE for licensing details.                                         *)
 (******************************************************************************)
 
-module Must = struct
-  include Idt
-  include Syntax
-end
+(** Interning strings *)
 
-let () =
-  if not !Sys.interactive then
-    Printf.eprintf "Hello, world.\n"
-  else
-    Printf.printf "Profound %s [%s]\n" Version.str Version.built
+type t = private string
+
+val clear : unit -> unit
+
+val intern : string -> t
+val rep    : t -> string

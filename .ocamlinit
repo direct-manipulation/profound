@@ -1,9 +1,11 @@
+(* -*- mode: typerex; -*- *)
 let __sys_int = !Sys.interactive ;;
 Sys.interactive := false ;;
 #use "topfind" ;;
 #require "unix" ;;
 #require "pcre" ;;
 #require "lablgtk2" ;;
+#require "batteries" ;;
 #directory "_build" ;;
 Sys.interactive := __sys_int ;;
 #load "profound.cma" ;;

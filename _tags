@@ -1,1 +1,1 @@
-<*.ml*> or <*.native> or <*.byte> : package(unix), package(pcre), package(lablgtk2)
+<*.ml*> or <*.native> or <*.byte> : package(unix), package(pcre), package(batteries), package(lablgtk2)
