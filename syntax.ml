@@ -31,12 +31,16 @@ and conn =
   | Tens | One | Plus | Zero | Par | Bot | With | Top
   | All of idt | Ex of idt
   | Bang | Qm
-  | Mpar | Lnk
+  | Mpar
+  | Mark of mkind
 
 and fconn = 
   | TENS | PLUS | PAR | WITH
   | ALL of idt | EX of idt
   | BANG | QM
+
+and mkind =
+  | ARG | SRC | SNK
 
 type sub =
   | Shift of int
@@ -203,7 +207,7 @@ let mk_qm fs =
 let mk_quant q fs =
   begin match fs with
   | [f] ->
-      if free_form 0 f then
+      if free_form 0 f || true then
         Conn (q, [f])
       else
         sub_form (Dot (Shift 0, Idx min_int)) f
@@ -216,24 +220,24 @@ let mk_mpar fs =
   | _ -> assert false
   end
 
-let mk_lnk fs =
+let mk_mark m fs =
   begin match fs with
-  | [_] -> Conn (Lnk, fs)
+  | [_] -> Conn (m, fs)
   | _ -> assert false
   end
 
 let mk c =
   begin match c with
-  | Tens -> mk_tens
-  | Plus -> mk_plus
-  | Par  -> mk_par
-  | With -> mk_with
-  | Bang -> mk_bang
-  | Qm   -> mk_qm
+  | Tens   -> mk_tens
+  | Plus   -> mk_plus
+  | Par    -> mk_par
+  | With   -> mk_with
+  | Bang   -> mk_bang
+  | Qm     -> mk_qm
   | All _
-  | Ex _ -> mk_quant c
-  | Mpar -> mk_mpar
-  | Lnk  -> mk_lnk
+  | Ex _   -> mk_quant c
+  | Mpar   -> mk_mpar
+  | Mark _ -> mk_mark c
   | One | Zero | Bot | Top ->
       mk_kon c
   end
@@ -412,26 +416,6 @@ let rec descend (tr : trail) f =
       descend tr f
   end
 
-exception Rule_int of form
-
-let rule_int tr1 tr2 f =
-  let (anc, tr1, tr2) = find_ancestor tr1 tr2 in
-  let (fcx0, f) = unsubst (descend anc f) in
-  begin match f with
-  | Conn (Par, [f1 ; f2]) ->
-      let (tr1, tr2) =
-        begin match tr1, tr2 with
-        | (0 :: tr1), (1 :: tr2)
-        | (1 :: tr2), (0 :: tr1) ->
-            (tr1, tr2)
-        | _ -> assert false
-        end in
-      let f1 = descend tr1 f1 in
-      let f2 = descend tr2 f2 in
-      subst fcx0 (Conn (Mpar, [f1 ; f2]))
-  | _ -> raise (Rule_int f)
-  end
-
 let is_qm fcx f =
   begin match Deque.front fcx with
   | Some ({fconn = QM ; _}, _) -> true
@@ -490,9 +474,89 @@ let rec reduce_choices fcx f =
       (Deque.cons fr fcx, f)
   end
 
+let main_arg f =
+  begin match f with
+  | Subst (_, f) -> f
+  | _ -> f
+  end
+
+let rec find_form pred f0 =
+  let f = main_arg f0 in
+  if pred f then f0 else
+    begin match f with
+    | Conn (_, fs) ->
+        let n = List.length fs in
+        let rec spin = function
+          | 0 -> raise Not_found
+          | j ->
+              let f1 = go_down ~n:(n - j) f0 in
+              begin try find_form pred f1 with
+                Not_found -> spin (j - 1)
+              end
+        in
+        spin n
+    | Atom _ -> raise Not_found
+    | Subst _ -> assert false
+    end
+
+let find_lnk f =
+  let f = find_form (function Conn (Mark (SRC | SNK), _) -> true | _ -> false) f in
+  unsubst f
+
+let has_lnk f =
+  try ignore (find_lnk f) ; true with Not_found -> false
+
+let is_mpar f =
+  begin match f with
+  | Conn (Par, [f ; g]) ->
+      has_lnk f && has_lnk g
+  | _ -> false
+  end
+
+let find_mpar f =
+  let f = find_form is_mpar f in
+  let (fcx, f) = unsubst f in
+  begin match f with
+  | Conn (Par, [f ; g]) -> (fcx, f, g)
+  | _ -> assert false
+  end
+
+let link_normal_form f =
+  let (fcx0, f, g) = find_mpar f in
+  let (fcx1, f) = find_lnk f in
+  let (fcx2, g) = find_lnk g in
+  subst fcx0 (Conn (Mpar, [subst fcx1 f ; subst fcx2 g]))
+
+exception Already_marked
+
+let make_lnk dir f =
+  let (fcx, f) = unsubst f in
+  assert (try ignore (find_lnk f) ; false with Not_found -> true) ;
+  begin match f with
+  | Conn (Mark (SRC | SNK), _) -> raise Already_marked
+  | _ ->
+      let f = Conn (Mark dir, [f]) in
+      subst fcx f
+  end
+
+let unlnk f =
+  begin match f with
+  | Conn (Mark (SRC | SNK), [f]) -> f
+  | _ -> assert false
+  end
+
+let is_src f =
+  begin match f with
+  | Conn (Mark SRC, _) -> true
+  | Conn (Mark SNK, _) -> false
+  | _ -> assert false
+  end
+
 let rec resolve_mpar fcx1 f1 fcx2 f2 =
   begin match Deque.front fcx1, Deque.front fcx2 with
   | None, None ->
+      let f1 = unlnk f1 in
+      let f2 = unlnk f2 in
       begin match f1, f2 with
       | Atom (s1, p1, ts1), Atom (s2, p2, ts2)
         when s1 <> s2 && p1 = p2 ->
@@ -509,7 +573,7 @@ let rec resolve_mpar fcx1 f1 fcx2 f2 =
       unframe fr f0
   | Some ({fconn = WITH ; _} as fr, fcx1), _ ->
       let f0 = resolve_mpar fcx1 f1 fcx2 f2 in
-      let u2 = go_top (subst fcx2 f2) in
+      let u2 = go_top (subst fcx2 (unlnk f2)) in
       let dist f = Conn (Par, [f ; u2]) in
       let fr = { fr with
         fleft = List.map dist fr.fleft ;
@@ -518,7 +582,7 @@ let rec resolve_mpar fcx1 f1 fcx2 f2 =
       unframe fr f0
   | _, Some ({fconn = WITH ; _} as fr, fcx2) ->
       let f0 = resolve_mpar fcx1 f1 fcx2 f2 in
-      let u1 = go_top (subst fcx1 f1) in
+      let u1 = go_top (subst fcx1 (unlnk f1)) in
       let dist f = Conn (Par, [u1 ; f]) in
       let fr = { fr with
         fleft = List.map dist fr.fleft ;
@@ -552,6 +616,21 @@ let rec resolve_mpar fcx1 f1 fcx2 f2 =
       resolve_mpar fcx1 f1 fcx2 f2
   | _, Some ({fconn = PLUS ; _}, fcx2) ->
       resolve_mpar fcx1 f1 fcx2 f2
+  | Some ({fconn = EX x1 ; _} as fr1, fcx1d),
+    Some ({fconn = EX x2 ; _} as fr2, fcx2d) ->
+      if is_src f1 then begin
+        let fr2 = { fr2 with fconn = EX (freshen x2) } in
+        let (fcx1, ss) = sub_fcx (Shift 1) fcx1 in
+        let f1 = sub_form ss f1 in
+        let f0 = resolve_mpar fcx1 f1 fcx2d f2 in
+        unframe fr2 f0
+      end else begin
+        let fr1 = { fr1 with fconn = EX (freshen x1) } in
+        let (fcx2, ss) = sub_fcx (Shift 1) fcx2 in
+        let f2 = sub_form ss f2 in
+        let f0 = resolve_mpar fcx1d f1 fcx2 f2 in
+        unframe fr1 f0
+      end
   | Some ({fconn = EX x ; _} as fr, fcx1), _ ->
       let fr = { fr with fconn = EX (freshen x) } in
       let (fcx2, ss) = sub_fcx (Shift 1) fcx2 in
@@ -581,6 +660,7 @@ let rec resolve_mpar fcx1 f1 fcx2 f2 =
 let resolve_mpar_internal = resolve_mpar
 
 let resolve_mpar f =
+  let f = link_normal_form (go_top f) in
   let (fcx, f) = unsubst f in
   begin match f with
   | Conn (Mpar, [f1 ; f2]) ->
@@ -589,9 +669,18 @@ let resolve_mpar f =
       let (fcx2, f2) = unsubst f2 in
       (* let (fcx2, f2) = reduce_choices fcx2 f2 in *)
       let f0 = resolve_mpar fcx1 f1 fcx2 f2 in
-      subst fcx f0
-  | _ -> invalid_arg "resolve_mpar"
+      go_top (subst fcx f0)
+  | _ -> assert false
   end
+
+exception Rule_int of form
+
+let rule_int tr1 tr2 f =
+  let f = make_lnk SRC (descend tr1 f) in
+  let f = go_top f in
+  let f = make_lnk SNK (descend tr2 f) in
+  let f = go_top f in
+  f
 
 module Pp = struct
   open Buffer
@@ -653,10 +742,17 @@ module Pp = struct
             add_string buf "\\lnot " ;
             pp_term cx buf (App (p, ts)) ;
         end
-    | Conn (Lnk, [f]) ->
-        add_string buf "\\left\\{" ;
+    | Conn (Mark ARG, [f]) ->
+        add_string buf "\\fbox{$" ;
         pp_form cx buf f ;
-        add_string buf "\\right\\}^{\\mathfrak{u}}"
+        add_string buf "$}"
+    | Conn (Mark (SRC | SNK as dir), [f]) ->
+        add_string buf "\\left[" ;
+        (* bprintf buf "\\left[\\mathfrak{u}{%s}" *)
+        (*   (match dir with SRC -> "\\uparrow" | _ -> "\\downarrow") ; *)
+        pp_form cx buf f ;
+        bprintf buf "\\right]^{\\smash{%s}}"
+          (match dir with SRC -> "\\Uparrow" | _ -> "\\Downarrow")
     | Conn (p, [f ; g]) ->
         pp_bracket ~p cx buf f ;
         add_string buf (bin_string p) ;
@@ -671,7 +767,7 @@ module Pp = struct
         add_string buf (kon_string p)
     | Conn _ -> assert false
     | Subst (fcx, f) ->
-        let f = Conn (Lnk, [f]) in
+        let f = Conn (Mark ARG, [f]) in
         let f = go_top (Subst (fcx, f)) in
         pp_form cx buf f
     end
@@ -687,7 +783,7 @@ module Pp = struct
 
   and pp_bracket ~p cx buf f =
     begin match head1 f with
-    | Conn (Lnk, [_]) ->
+    | Conn (Mark _, [_]) ->
         pp_form cx buf f
     | Conn (q, _) ->
         if p = q || (is_un p && is_un q) || prec p < prec q then
@@ -735,7 +831,7 @@ module Pp = struct
     | Tens -> 1 (* 4 *)
     | Ex _ | All _ -> 0
     | Bang | Qm -> 6
-    | One | Zero | Top | Bot | Lnk -> max_int
+    | One | Zero | Top | Bot | Mark _ -> max_int
 
   let wash_forms ?(cx = []) fs =
     let buf = Buffer.create 19 in
@@ -753,7 +849,7 @@ end
         
 
 
-module C (* : sig end *) = struct
+module C : sig val forms : form list ref end = struct
 
   open Idt
 
@@ -771,7 +867,7 @@ module C (* : sig end *) = struct
     | With -> Plus | Top -> Zero
     | All x -> Ex x | Ex x -> All x
     | Bang -> Qm | Qm -> Bang
-    | Mpar | Lnk -> invalid_arg "dual: found MPAR or LNK"
+    | Mpar | Mark _ -> invalid_arg "dual: found MPAR or MARK"
 
   let rec dual f =
     begin match f with
@@ -829,10 +925,17 @@ module C (* : sig end *) = struct
   *)
 
 
-  (* let f0 = par [tens [a ; b] ; *)
-  (*               par [wth [a' ; b'] ; *)
-  (*                    plus [a' ; b']]] |> push *)
-  (* let i0 = rule_int [0 ; 0] [1 ; 0 ; 0] f0 *)
+  let f0 = par [tens [a ; b] ;
+                par [wth [a' ; b'] ;
+                     plus [a' ; b']]] |> push
+  let f0 = rule_int [0 ; 0] [1 ; 0 ; 0] f0 |> push
+  let f0 = resolve_mpar f0 |> push
+  let f0 = rule_int [0 ; 1 ; 1]  [0 ; 1 ; 0 ; 1] f0 |> push
+  let f0 = resolve_mpar f0 |> push
+  let f0 = rule_int [0 ; 0] [1 ; 1] f0 |> push
+  let f0 = resolve_mpar f0 |> push
+  let f0 = rule_int [1 ; 0] [1 ; 1 ; 0] f0 |> push
+  let f0 = resolve_mpar f0 |> push
   (* let r0 = go_top (resolve_mpar i0) |> push *)
   (* let i1 = rule_int [0 ; 1 ; 0 ; 1] [0 ; 1 ; 1] r0 *)
   (* let r1 = go_top (resolve_mpar i1) |> push *)
@@ -841,16 +944,16 @@ module C (* : sig end *) = struct
   (* let i3 = rule_int [1 ; 0] [1 ; 1 ; 0] r2 *)
   (* let r3 = go_top (resolve_mpar i3) |> push *)
 
-
-  let f0 = par [ex "x" (all "y" (plus [natm "p" [idx 1] ;
-                                       atom "p" [idx 0]])) ;
-                ex "x" (all "y" (plus [natm "p" [idx 1] ;
-                                       atom "p" [idx 0]]))] |> push
-  let i0 = rule_int [0 ; 0 ; 0 ; 0] [1 ; 0 ; 0 ; 1] f0 |> push
-  let r0 = go_top (resolve_mpar i0) |> push
-
-  let doit () = Pp.wash_forms !forms
+  (* let f0 = par [ex "x" (all "y" (plus [natm "p" [idx 1] ; *)
+  (*                                      atom "p" [idx 0]])) ; *)
+  (*               ex "x" (all "y" (ex "z" (plus [natm "p" [idx 2] ; *)
+  (*                                      atom "p" [idx 1]])))] |> push *)
+  (* let f0 = make_lnk SRC (descend [0 ; 0 ; 0 ; 0] f0) *)
+  (* let f0 = go_top f0 *)
+  (* let f0 = make_lnk SNK (descend [1 ; 0 ; 0 ; 0 ; 1] f0) *)
+  (* let f0 = go_top f0 |> push *)
+  (* let r0 = resolve_mpar f0 |> push *)
 
 end
 
-include C
+let _ = Pp.wash_forms !C.forms
