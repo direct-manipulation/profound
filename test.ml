@@ -9,7 +9,7 @@ open Batteries
 open Syntax
 open Syntax_tex
 open Traversal
-open Rest
+open Rules
 
 module C : sig val forms : form list ref end = struct
 
