@@ -4,4 +4,7 @@ version.ml
 *.native
 *.byte
 *.log
-
+tex/*.aux
+tex/*.log
+tex/*.dvi
+tex/*.png

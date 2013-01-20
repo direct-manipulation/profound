@@ -58,16 +58,14 @@ let rec pp_form cx buf f =
           pp_term cx buf (App (p, ts)) ;
       end
   | Conn (Mark ARG, [f]) ->
-      add_string buf "\\fbox{$" ;
+      add_string buf "\\hl{\\pmb\\{" ;
       pp_form cx buf f ;
-      add_string buf "$}"
+      add_string buf "\\pmb\\}}"
   | Conn (Mark (SRC | SNK as dir), [f]) ->
-      add_string buf "\\left[" ;
-        (* bprintf buf "\\left[\\mathfrak{u}{%s}" *)
-        (*   (match dir with SRC -> "\\uparrow" | _ -> "\\downarrow") ; *)
+      bprintf buf "{\\color{%s}"
+        (match dir with SRC -> "src" | _ -> "dst") ;
       pp_form cx buf f ;
-      bprintf buf "\\right]^{\\smash{%s}}"
-        (match dir with SRC -> "\\Uparrow" | _ -> "\\Downarrow")
+      add_string buf "}"
   | Conn (p, [f ; g]) ->
       pp_bracket ~p cx buf f ;
       add_string buf (bin_string p) ;
@@ -159,6 +157,6 @@ let wash_forms ?(cx = []) fs =
   let ch = open_out "/tmp/profound-render.tex" in
   output_string ch (Buffer.contents buf) ;
   close_out ch ;
-  Sys.command "( cd tex && rubber --into /tmp -d bar.tex && pdfcrop --margin 3 /tmp/bar.pdf /tmp/bar-c.pdf ) >/dev/null 2>&1"
+  Sys.command "( cd tex && rubber --into /tmp bar.tex && dvipng -D 240 -T tight -bg transparent -z 9 /tmp/bar.dvi ) "
 
 
