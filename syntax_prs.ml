@@ -118,3 +118,4 @@ let rec index_form cx f =
 
 (* let parse_form str = Prs.parse (Lazy.force form) str 0 *)
 let parse_form str = Prs.parse (Lazy.force form <$> index_form []) str 0
+let parse_term cx str = Prs.parse (term <$> index_term cx) str 0

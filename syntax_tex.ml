@@ -13,15 +13,25 @@ open Traversal
 
 let add_idt buf i = add_string buf (Idt.rep i)
 
+let add_var buf v =
+  let vr = Idt.rep v in
+  try begin
+    let (main, sub) = String.split vr ~by:"_" in
+    add_string buf main ;
+    add_string buf "_{" ;
+    add_string buf sub ;
+    add_string buf "}"
+  end with Not_found -> add_string buf vr
+
 let add_fun kon buf f =
   if kon then add_string buf "\\mathsf{" ;
-  add_idt buf f ;
+  add_var buf f ;
   if kon then add_string buf "}"
 
 let rec pp_term ?(kon = true) cx buf t =
   begin match t with
   | Idx n ->
-      add_idt buf (List.nth cx n)
+      add_var buf (List.nth cx n)
   | App (f, []) ->
       add_fun kon buf f
   | App (f, ts) ->
@@ -72,15 +82,15 @@ let rec pp_form cx buf f =
       pp_form cx buf f ;
       add_string buf "}"
   | Conn (p, [f ; g]) ->
-      pp_bracket ~p cx buf f ;
+      pp_check_bracket ~p cx buf f ;
       add_string buf (bin_string p) ;
-      pp_bracket ~p cx buf g
+      pp_check_bracket ~p cx buf g
   | Conn ((All x | Ex x) as p, [f]) ->
       add_string buf (un_string p) ;
-      pp_bracket ~p (x :: cx) buf f
+      pp_check_bracket ~p (x :: cx) buf f
   | Conn (p, [f]) ->
       add_string buf (un_string p) ;
-      pp_bracket ~p cx buf f ;
+      pp_check_bracket ~p cx buf f ;
   | Conn (p, []) ->
       add_string buf (kon_string p)
   | Conn _ -> assert false
@@ -99,21 +109,31 @@ and extend cx fcx =
   | None -> cx
   end
 
-and pp_bracket ~p cx buf f =
+and needs_bracket p f =
   begin match head1 f with
-  | Conn (Mark _, [_]) ->
-      pp_form cx buf f
+  | Conn ((Mpar | Mark _), _)
+  | Atom _ -> false
   | Conn (q, _) ->
-      if p = q || (is_un p && is_un q) || prec p < prec q then
-        pp_form cx buf f
-      else begin
-        add_string buf "\\left(" ;
-        pp_form cx buf f ;
-        add_string buf "\\right)"
-      end
-  | _ ->
-      pp_form cx buf f
+      not (p = q || (is_un p && is_un q) || prec p < prec q)
+  | Subst _ -> assert false
   end
+
+and pp_check_bracket ~p cx buf f =
+  begin match head1 f with
+  | Conn (Mark _, [fb]) ->
+      if needs_bracket p fb
+      then pp_bracket cx buf f
+      else pp_form cx buf f
+  | f ->
+      if needs_bracket p f
+      then pp_bracket cx buf f
+      else pp_form cx buf f
+  end
+
+and pp_bracket cx buf f =
+  add_string buf "\\left(" ;
+  pp_form cx buf f ;
+  add_string buf "\\right)"
 
 and is_un = function
   | All _ | Ex _ | Bang | Qm -> true
@@ -151,17 +171,22 @@ and prec = function
   | Bang | Qm -> 6
   | One | Zero | Top | Bot | Mark _ -> max_int
 
-let wash_forms ?(cx = []) fs =
+let wash_forms ?(cx = []) cur his =
   let buf = Buffer.create 19 in
-  add_string buf "{}" ;
+  add_string buf "\\cur{" ;
+  pp_form cx buf cur ;
+  add_string buf "}\n" ;
   List.iter begin
     fun f ->
+      add_string buf "\\his{" ;
       pp_form cx buf f ;
-      add_string buf "\\\\" ;
-  end fs ;
+      add_string buf "}\n" ;
+  end his ;
   let ch = open_out "/tmp/profound-render.tex" in
   output_string ch (Buffer.contents buf) ;
   close_out ch ;
-  Sys.command "( cd tex && rubber --into /tmp bar.tex && dvipng -D 240 -T tight -bg transparent -z 9 /tmp/bar.dvi ) "
+  (* let suppress = "" in *)
+  let suppress = ">/dev/null 2>&1" in
+  Sys.command ("( cd tex && latex '\\nonstopmode\\input wash_form.tex' && dvipng -D 240 -T tight -bg transparent -z 9 wash_form.dvi )" ^ suppress)
 
 

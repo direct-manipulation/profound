@@ -8,6 +8,8 @@ open Batteries
 
 type idt = Idt.t
 
+let equals = Idt.intern "="
+
 type term =
   | Idx   of int
   | App   of idt * term list
@@ -42,65 +44,6 @@ and fconn =
 and mkind =
   | ARG | SRC | SNK
 
-type sub =
-  | Shift of int
-  | Dot of sub * term
-
-let rec sub_idx ss n =
-  begin match ss with
-  | Shift j -> Idx (j + n)
-  | Dot (_, t) when n = 0 -> t
-  | Dot (ss, _) -> sub_idx ss (n - 1)
-  end
-
-and sub_term ss t =
-  begin match t with
-  | Idx n -> sub_idx ss n
-  | App (f, ts) -> App (f, List.map (sub_term ss) ts)
-  end
-
-and sub_form ss f =
-  begin match f with
-  | Atom (s, p, ts) ->
-      Atom (s, p, List.map (sub_term ss) ts)
-  | Conn ((All x | Ex x) as c, fs) ->
-      Conn (c, List.map (sub_form (bump ss)) fs)
-  | Conn (c, fs) ->
-      Conn (c, List.map (sub_form ss) fs)
-  | Subst (fcx, f) ->
-      let (fcx, ss) = sub_fcx ss fcx in
-      Subst (fcx, sub_form ss f)
-  end
-
-and sub_fcx ss fcx =
-  begin match Deque.front fcx with
-  | Some ({ fconn = (ALL _ | EX _) ; _ } as fr, fcx) ->
-      let (fcx, ss) = sub_fcx (bump ss) fcx in
-      (Deque.cons fr fcx, ss)
-  | Some (fr, fcx) ->
-      let fr = { fr with
-        fleft = List.map (sub_form ss) fr.fleft ;
-        fright = List.map (sub_form ss) fr.fright ;
-      } in
-      let (fcx, ss) = sub_fcx ss fcx in
-      (Deque.cons fr fcx, ss)
-  | None ->
-      (Deque.empty, ss)
-  end
-
-and bump ss = Dot (seq (Shift 1) ss, Idx 0)
-
-and seq ss tt =
-  begin match ss, tt with
-  | Shift j, Shift k -> Shift (j + k)
-  | ss, Shift 0 -> ss
-  | Shift 0, tt -> tt
-  | Dot (ss, _), Shift j ->
-      seq ss (Shift (j - 1))
-  | _, Dot (tt, t) ->
-      Dot (seq ss tt, sub_term ss t)
-  end
-
 let rec free_term x t =
   begin match t with
   | Idx k -> x = k
@@ -132,6 +75,15 @@ and free_fcx x fcx f =
   end
 
 let atom s p ts = Atom (s, p, ts)
+
+let subst fcx f =
+  begin match f with
+  | Subst (fcx1, f) ->
+      Subst (Deque.append fcx fcx1, f)
+  | _ ->
+      if Deque.is_empty fcx then f
+      else Subst (fcx, f)
+  end
 
 let mk_kon c fs =
   begin match fs with
@@ -208,11 +160,8 @@ let mk_qm fs =
 
 let mk_quant q fs =
   begin match fs with
-  | [f] ->
-      if free_form 0 f || true then
-        Conn (q, [f])
-      else
-        sub_form (Dot (Shift 0, Idx min_int)) f
+  | [Conn (One, [])] -> Conn (One, [])
+  | [f] -> Conn (q, [f])
   | _ -> assert false
   end
 
@@ -244,6 +193,81 @@ let conn c =
       mk_kon c
   end
 
+type sub =
+  | Shift of int
+  | Dot of sub * term
+
+let rec sub_idx ss n =
+  begin match ss with
+  | Shift j -> Idx (j + n)
+  | Dot (_, t) when n = 0 -> t
+  | Dot (ss, _) -> sub_idx ss (n - 1)
+  end
+
+and sub_term ss t =
+  begin match t with
+  | Idx n -> sub_idx ss n
+  | App (f, ts) -> App (f, List.map (sub_term ss) ts)
+  end
+
+and sub_form ss f =
+  begin match f with
+  | Atom (s, p, [t1 ; t2]) when p = equals ->
+      let t1 = sub_term ss t1 in
+      let t2 = sub_term ss t2 in
+      if t1 = t2 then
+        if s = ASSERT then conn One [] else conn Bot []
+      else atom s p [t1 ; t2]
+  | Atom (s, p, ts) ->
+      atom s p (List.map (sub_term ss) ts)
+  | Conn ((All x | Ex x) as c, fs) ->
+      conn c (List.map (sub_form (bump ss)) fs)
+  | Conn (c, fs) ->
+      conn c (List.map (sub_form ss) fs)
+  | Subst (fcx, f) ->
+      let (fcx, ss) = sub_fcx ss fcx in
+      subst fcx (sub_form ss f)
+  end
+
+and sub_fcx ss fcx =
+  begin match Deque.front fcx with
+  | Some ({ fconn = (ALL _ | EX _) ; _ } as fr, fcx) ->
+      let (fcx, ss) = sub_fcx (bump ss) fcx in
+      (Deque.cons fr fcx, ss)
+  | Some (fr, fcx) ->
+      let fr = { fr with
+        fleft = List.map (sub_form ss) fr.fleft ;
+        fright = List.map (sub_form ss) fr.fright ;
+      } in
+      let (fcx, ss) = sub_fcx ss fcx in
+      (Deque.cons fr fcx, ss)
+  | None ->
+      (Deque.empty, ss)
+  end
+
+and bump ss = Dot (seq (Shift 1) ss, Idx 0)
+
+and seq ss tt =
+  begin match ss, tt with
+  | Shift j, Shift k -> Shift (j + k)
+  | ss, Shift 0 -> ss
+  | Shift 0, tt -> tt
+  | Dot (ss, _), Shift j ->
+      seq ss (Shift (j - 1))
+  | _, Dot (tt, t) ->
+      Dot (seq ss tt, sub_term ss t)
+  end
+
+let rec fcx_vars fcx =
+  begin match Deque.rear fcx with
+  | Some (fcx, {fconn = (EX x | ALL x) ; _}) ->
+      x :: fcx_vars fcx
+  | Some (fcx, _) ->
+      fcx_vars fcx
+  | None ->
+      []
+  end
+
 let fconn_of_conn = function
   | Tens -> TENS | Plus -> PLUS
   | Par -> PAR | With -> WITH
@@ -258,15 +282,6 @@ let conn_of_fconn = function
   | BANG -> Bang | QM -> Qm
 
 let fconn fc = conn (conn_of_fconn fc)
-
-let subst fcx f =
-  begin match f with
-  | Subst (fcx1, f) ->
-      Subst (Deque.append fcx fcx1, f)
-  | _ ->
-      if Deque.is_empty fcx then f
-      else Subst (fcx, f)
-  end
 
 let subst1 fr f = subst (Deque.of_list [fr]) f
 

@@ -21,6 +21,15 @@ let parse p input off =
     | Read a -> Read (a, pst.off)
     | Fail (pos, msg) -> Fail (pos, msg)
 
+let parse_full p input off =
+  let pst = { input ; off } in
+  match p.prs pst with
+    | Read a ->
+        if pst.off = String.length pst.input
+        then Read a
+        else Fail (pst.off, "unconsumed input remains")
+    | Fail (pos, msg) -> Fail (pos, msg)
+
 let wsprex = Pcre.regexp ~flags:[`MULTILINE] "\\s*"
 
 let skip rex pos str =

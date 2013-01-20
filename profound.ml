@@ -8,7 +8,16 @@ open Batteries
 
 open Syntax
 
-let verbosity = ref 0
+let set_verbosity v =
+  let open Log in
+  begin match v with
+  | 0 -> loglevel := FATAL
+  | 1 -> loglevel := ERROR
+  | 2 -> loglevel := WARN
+  | 3 -> loglevel := INFO
+  | 4 -> loglevel := DEBUG
+  | _ -> loglevel := TRACE
+  end
 
 let infile = ref None
 let set_infile fn =
@@ -24,10 +33,10 @@ let parse_opts () =
   let open Arg in
   let opts = [
     "-i", String set_infile, "<file> Read theorem from <file>" ;
-    "-v", Set_int verbosity, "<num> Set vebosity to <num>" ;
+    "-v", Int set_verbosity, "<num> Set vebosity to <num>" ;
   ] in
   let opts = align opts in
-  let umsg = "Usage: profound [-S] FILE.cth" in
+  let umsg = "Usage: profound [options] (theorem | -i file)" in
   let imm_txt = ref None in
   let add_txt txt = match !imm_txt with
     | Some _ ->
@@ -52,9 +61,11 @@ let parse_opts () =
   end
         
 let main () =
-  Log.to_file "profound.log" ;
-  Log.(log INFO "Profound %s START" Version.str) ;
   let txt = parse_opts () in
+  Log.to_stdout () ;
+  Log.(log INFO "Profound %s START" Version.str) ;
+  ignore (GMain.init ()) ;
+  Log.(log INFO "GTK+ Initialized") ;
   let frm =
     begin match Syntax_prs.parse_form txt with
     | Prs.Read (f, _) -> f
@@ -62,7 +73,7 @@ let main () =
         Printf.eprintf "Could not parse: %S\n%!" Sys.argv.(1) ;
         exit 1
     end in
-  Syntax_tex.wash_forms [frm] ;
+  Window.startup frm ;
   Log.(log INFO "Done")
 
 let () =

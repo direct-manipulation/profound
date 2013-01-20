@@ -31,7 +31,10 @@ and conn =
   | Bang | Qm
   | Mpar | Mark of mkind
 
-and fconn = TENS | PLUS | PAR | WITH | ALL of Idt.t | EX of Idt.t | BANG | QM
+and fconn =
+  | TENS | PLUS | PAR | WITH
+  | ALL of Idt.t | EX of Idt.t
+  | BANG | QM
 
 and mkind = ARG | SRC | SNK
 
@@ -42,10 +45,6 @@ val sub_term : sub -> term -> term
 val sub_form : sub -> form -> form
 val sub_fcx : sub -> fcx -> fcx * sub
 val seq : sub -> sub -> sub
-
-val atom : sign -> Idt.t -> term list -> form
-val conn : conn -> form list -> form
-val subst : fcx -> form -> form
 
 val fconn_of_conn : conn -> fconn
 val conn_of_fconn : fconn -> conn
@@ -58,3 +57,9 @@ val head1 : form -> form
 val free_term : int -> term -> bool
 val free_form : int -> form -> bool
 val free_fcx : int -> fcx -> form -> bool
+
+val fcx_vars : fcx -> Idt.t list
+
+val atom : sign -> Idt.t -> term list -> form
+val conn : conn -> form list -> form
+val subst : fcx -> form -> form

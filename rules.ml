@@ -10,6 +10,14 @@ open Log
 open Syntax
 open Traversal
 
+type rule_error =
+  | Stuck
+  | Not_par
+  | Already_marked
+
+exception Rule_failure of rule_error
+let rulefail err = raise (Rule_failure err)
+
 let is_qm fcx f =
   begin match Deque.front fcx with
   | Some ({fconn = QM ; _}, _) -> true
@@ -28,8 +36,6 @@ let rec bang_free fcx =
   | Some (_, fcx) -> bang_free fcx
   end
 
-exception Stuck
-
 let rec equate ts1 ts2 =
   begin match ts1, ts2 with
   | [], [] -> conn One []
@@ -46,7 +52,7 @@ let freshen =
   let last = ref 0 in
   fun x ->
     incr last ;
-    Idt.intern (Idt.rep x ^ "_{" ^ string_of_int !last ^ "}")
+    Idt.intern (Idt.rep x ^ "_" ^ string_of_int !last)
 
 let rec reduce_choices fcx f =
   begin match Deque.front fcx with
@@ -80,11 +86,12 @@ let find_form pred f0 =
     let (fcx, f) = unsubst f0 in
     if pred f then raise (Found f0) else
       begin match f with
+      | Conn ((Mpar | Mark _ ), _)
+      | Atom _ -> ()
       | Conn (_, fs) ->
           for i = 0 to List.length fs - 1 do
             find_loop (go_down i f0)
           done
-      | Atom _ -> ()
       | Subst _ -> assert false
       end
   in
@@ -106,7 +113,7 @@ let is_mpar f =
   end
 
 let find_mpar f =
-  let f = find_form is_mpar f in
+  let f = try find_form is_mpar f with Not_found -> rulefail Not_par in
   let (fcx, f) = unsubst f in
   begin match f with
   | Conn (Par, [f ; g]) -> (fcx, f, g)
@@ -119,13 +126,11 @@ let link_normal_form f =
   let (fcx2, g) = find_lnk g in
   subst fcx0 (conn Mpar [subst fcx1 f ; subst fcx2 g])
 
-exception Already_marked
-
 let make_lnk dir f =
   let (fcx, f) = unsubst f in
   assert (try ignore (find_lnk f) ; false with Not_found -> true) ;
   begin match f with
-  | Conn (Mark (SRC | SNK), _) -> raise Already_marked
+  | Conn (Mark (SRC | SNK), _) -> rulefail Already_marked
   | _ ->
       let f = conn (Mark dir) [f] in
       subst fcx f
@@ -134,7 +139,7 @@ let make_lnk dir f =
 let unlnk f =
   begin match f with
   | Conn (Mark (SRC | SNK), [f]) -> f
-  | _ -> assert false
+  | _ -> f
   end
 
 let is_src f =
@@ -236,18 +241,18 @@ let rec resolve_mpar fcx1 f1 fcx2 f2 =
       let f0 = resolve_mpar fcx1 f1 fcx2 f2 in
       unframe fr f0
   | Some ({fconn = BANG ; _} as fr, fcx1), _ ->
-      if not (is_qm fcx2 f2) then raise Stuck ;
+      if not (is_qm fcx2 f2) then rulefail Stuck ;
       let f0 = resolve_mpar fcx1 f1 fcx2 f2 in
       unframe fr f0
   | _, Some ({fconn = BANG ; _} as fr, fcx2) ->
-      if not (is_qm fcx1 f1) then raise Stuck ;
+      if not (is_qm fcx1 f1) then rulefail Stuck ;
       let f0 = resolve_mpar fcx1 f1 fcx2 f2 in
       unframe fr f0
   (* The following are supposedly unreachable states *)
   (* They are just present to silence the exhaustiveness checker *)
   | Some ({fconn = QM ; _}, _), _
   | _, Some ({fconn = QM ; _}, _) ->
-      raise Stuck
+      rulefail Stuck
   end
 let resolve_mpar_internal = resolve_mpar
 
@@ -264,8 +269,6 @@ let resolve_mpar f =
       go_top (subst fcx f0)
   | _ -> assert false
   end
-
-exception Rule_int of form
 
 let rule_int tr1 tr2 f =
   let f = make_lnk SRC (descend tr1 f) in

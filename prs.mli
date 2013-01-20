@@ -8,6 +8,7 @@ and 'a resp =
   | Read of 'a
   | Fail of int * string
 val parse : 'a prs -> string -> int -> ('a * int) resp
+val parse_full : 'a prs -> string -> int -> 'a resp
 val fuzzy : string -> string prs
 val exact : string -> string prs
 val regex : ?skipws:bool -> Pcre.regexp -> string prs

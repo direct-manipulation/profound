@@ -24,14 +24,12 @@ let rec split3 n xs =
   end with _ -> travfail No_such_child
 
 let go_down n f =
-  let (fcx, f) =
-    begin match f with
-    | Subst (fcx, f) -> (fcx, f)
-    | _ -> (Deque.empty, f)
-    end in
+  let (fcx, f) = unsubst f in
   let (fr, f) =
     begin match f with
-    | Atom _ -> travfail At_leaf
+    | Conn ((Mpar | Mark _), _)
+    | Atom _ ->
+        travfail At_leaf
     | Conn (c, fs) ->
         let (lfs, f, rfs) = split3 n fs in
         let fr = {
@@ -101,4 +99,17 @@ let rec descend (tr : trail) f =
   | cr :: tr ->
       let f = go_down cr f in
       descend tr f
+  end
+
+let rec cleanup f =
+  begin match head1 f with
+  | Atom _ as f -> f
+  | Conn (Mark _, [f]) ->
+      cleanup f
+  | Conn (Mpar, [f ; g]) ->
+      conn Par [cleanup f ; cleanup g]
+  | Conn (c, fs) ->
+      let fs = List.map cleanup fs in
+      conn c fs
+  | Subst _ -> assert false
   end
