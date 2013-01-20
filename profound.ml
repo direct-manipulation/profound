@@ -4,10 +4,7 @@
 (* See LICENSE for licensing details.                                         *)
 (******************************************************************************)
 
-module Must = struct
-  include Idt
-  include Rest
-end
+module type S = module type of Test
 
 let () =
   Log.to_file "profound.log" ;
