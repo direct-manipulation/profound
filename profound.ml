@@ -10,7 +10,12 @@ module Must = struct
 end
 
 let () =
+  Log.to_file "profound.log" ;
+  Log.(log INFO "Profound %s START" Version.str)
+;;
+
+let () =
   if not !Sys.interactive then
-    Printf.eprintf "Hello, world.\n"
+    Printf.printf "Profound %s non-interactive mode.\n" Version.str
   else
     Printf.printf "Profound %s [%s]\n" Version.str Version.built

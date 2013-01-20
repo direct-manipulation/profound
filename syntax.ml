@@ -4,7 +4,7 @@
 (* See LICENSE for licensing details.                                         *)
 (******************************************************************************)
 
-open Batteries_uni
+open Batteries
 
 type idt = Idt.t
 
@@ -131,6 +131,8 @@ and free_fcx x fcx f =
       || free_fcx x fcx f
   end
 
+let atom s p ts = Atom (s, p, ts)
+
 let mk_kon c fs =
   begin match fs with
   | [] -> Conn (c, [])
@@ -226,7 +228,7 @@ let mk_mark m fs =
   | _ -> assert false
   end
 
-let mk c =
+let conn c =
   begin match c with
   | Tens   -> mk_tens
   | Plus   -> mk_plus
@@ -242,14 +244,21 @@ let mk c =
       mk_kon c
   end
 
-exception Leaf
+type traversal_error =
+  | At_leaf
+  | At_top
+  | At_edge
+  | No_such_child
+
+exception Traversal of traversal_error
+let travfail err = raise (Traversal err)
 
 let fconn_of_conn = function
   | Tens -> TENS | Plus -> PLUS
   | Par -> PAR | With -> WITH
   | All x -> ALL x | Ex x -> EX x
   | Bang -> BANG | Qm -> QM
-  | _ -> raise Leaf
+  | _ -> travfail At_leaf
 
 let conn_of_fconn = function
   | TENS -> Tens | PLUS -> Plus
@@ -257,15 +266,13 @@ let conn_of_fconn = function
   | ALL x -> All x | EX x -> Ex x
   | BANG -> Bang | QM -> Qm
 
-let mk_fconn fc = mk (conn_of_fconn fc)
-
-exception Bad_index
+let fconn fc = conn (conn_of_fconn fc)
 
 let rec split3 n xs =
   try begin match List.split_at n xs with
   | l, (u :: r) -> (l, u, r)
-  | _ -> raise Bad_index
-  end with _ -> raise Bad_index
+  | _ -> travfail No_such_child
+  end with _ -> travfail No_such_child
 
 let subst fcx f =
   begin match f with
@@ -290,7 +297,7 @@ let rec unsubst f k =
 let unsubst f = unsubst f (fun fcx f -> (fcx, f))
 
 let unframe fr f =
-  mk_fconn fr.fconn (fr.fleft @ (f :: fr.fright))
+  fconn fr.fconn (fr.fleft @ (f :: fr.fright))
 
 let head1 f =
   match f with
@@ -301,7 +308,7 @@ let head1 f =
       end
   | _ -> f
 
-let go_down ?(n = 0) f =
+let go_down n f =
   let (fcx, f) =
     begin match f with
     | Subst (fcx, f) -> (fcx, f)
@@ -309,7 +316,7 @@ let go_down ?(n = 0) f =
     end in
   let (fr, f) =
     begin match f with
-    | Atom _ -> raise Leaf
+    | Atom _ -> travfail At_leaf
     | Conn (c, fs) ->
         let (lfs, f, rfs) = split3 n fs in
         let fr = {
@@ -323,17 +330,12 @@ let go_down ?(n = 0) f =
   let fcx = Deque.snoc fcx fr in
   subst fcx f
 
-exception No_context
-
 let go_up f =
-  begin match f with
-  | Subst (fcx, f) ->
-      begin match Deque.rear fcx with
-      | Some (fcx, fr) ->
-          subst fcx (unframe fr f)
-      | None -> assert false
-      end
-  | _ -> raise No_context
+  let (fcx, f) = unsubst f in
+  begin match Deque.rear fcx with
+  | Some (fcx, fr) ->
+      subst fcx (unframe fr f)
+  | None -> travfail At_top
   end
 
 let rec go_top f =
@@ -342,77 +344,47 @@ let rec go_top f =
   | _ -> f
   end
 
-exception At_edge
-
 let go_left f =
-  begin match f with
-  | Subst (fcx, f) ->
-      begin match Deque.rear fcx with
-      | Some (fcx, fr) ->
-          begin match fr.fleft with
-          | lf :: lfs ->
-              let fr = { fr with
-                fleft = lfs ;
-                fright = f :: fr.fright ;
-              } in
-              let fcx = Deque.snoc fcx fr in
-              subst fcx lf
-          | [] -> raise At_edge
-          end
-      | None -> assert false
+  let (fcx, f) = unsubst f in
+  begin match Deque.rear fcx with
+  | Some (fcx, fr) ->
+      begin match fr.fleft with
+      | lf :: lfs ->
+          let fr = { fr with
+            fleft = lfs ;
+            fright = f :: fr.fright ;
+          } in
+          let fcx = Deque.snoc fcx fr in
+          subst fcx lf
+      | [] -> travfail At_edge
       end
-  | _ -> raise No_context
+  | None -> travfail At_top
   end
 
 let go_right f =
-  begin match f with
-  | Subst (fcx, f) ->
-      begin match Deque.rear fcx with
-      | Some (fcx, fr) ->
-          begin match fr.fright with
-          | rf :: rfs ->
-              let fr = { fr with
-                fright = rfs ;
-                fleft = f :: fr.fleft ;
-              } in
-              let fcx = Deque.snoc fcx fr in
-              subst fcx rf
-          | [] -> raise At_edge
-          end
-      | None -> assert false
+  let (fcx, f) = unsubst f in
+  begin match Deque.rear fcx with
+  | Some (fcx, fr) ->
+      begin match fr.fright with
+      | rf :: rfs ->
+          let fr = { fr with
+            fright = rfs ;
+            fleft = f :: fr.fleft ;
+          } in
+          let fcx = Deque.snoc fcx fr in
+          subst fcx rf
+      | [] -> travfail At_edge
       end
-  | _ -> raise No_context
-  end
+  | None -> travfail At_top
+ end
 
-type crumb = int
-type trail = crumb list
-
-type trail_error =
-  | Trails_same
-  | Trails_prefix
-exception Bad_trail of trail_error
-
-let rec find_ancestor (tr1 : trail) (tr2 : trail) k =
-  begin match tr1, tr2 with
-  | (n1 :: tr1'), (n2 :: tr2') ->
-      if n1 = n2 then
-        find_ancestor tr1' tr2' begin
-          fun anc tr1 tr2 ->
-            k (n1 :: anc) tr1 tr2
-        end
-      else k [] tr1 tr2
-  | [], [] -> raise (Bad_trail Trails_same)
-  | [], _
-  | _, [] -> raise (Bad_trail Trails_prefix)
-  end
-let find_ancestor tr1 tr2 = find_ancestor tr1 tr2
-  (fun anc tr1 tr2 -> (anc, tr1, tr2))
+type trail = int list
 
 let rec descend (tr : trail) f =
   begin match tr with
   | [] -> f
   | cr :: tr ->
-      let f = go_down ~n:cr f in
+      let f = go_down cr f in
       descend tr f
   end
 
@@ -434,7 +406,6 @@ let rec bang_free fcx =
   | Some (_, fcx) -> bang_free fcx
   end
 
-exception Promotion of form
 exception Stuck
 
 let rec equate ts1 ts2 =
@@ -480,24 +451,23 @@ let main_arg f =
   | _ -> f
   end
 
-let rec find_form pred f0 =
-  let f = main_arg f0 in
-  if pred f then f0 else
-    begin match f with
-    | Conn (_, fs) ->
-        let n = List.length fs in
-        let rec spin = function
-          | 0 -> raise Not_found
-          | j ->
-              let f1 = go_down ~n:(n - j) f0 in
-              begin try find_form pred f1 with
-                Not_found -> spin (j - 1)
-              end
-        in
-        spin n
-    | Atom _ -> raise Not_found
-    | Subst _ -> assert false
-    end
+exception Found of form
+
+let find_form pred f0 =
+  let rec find_loop f0 =
+    let (fcx, f) = unsubst f0 in
+    if pred f then raise (Found f0) else
+      begin match f with
+      | Conn (_, fs) ->
+          for i = 0 to List.length fs - 1 do
+            find_loop (go_down i f0)
+          done
+      | Atom _ -> ()
+      | Subst _ -> assert false
+      end
+  in
+  try find_loop f0 ; raise Not_found with
+  | Found f -> f
 
 let find_lnk f =
   let f = find_form (function Conn (Mark (SRC | SNK), _) -> true | _ -> false) f in
@@ -644,11 +614,11 @@ let rec resolve_mpar fcx1 f1 fcx2 f2 =
       let f0 = resolve_mpar fcx1 f1 fcx2 f2 in
       unframe fr f0
   | Some ({fconn = BANG ; _} as fr, fcx1), _ ->
-      if not (is_qm fcx2 f2) then raise (Promotion (subst fcx2 f2)) ;
+      if not (is_qm fcx2 f2) then raise Stuck ;
       let f0 = resolve_mpar fcx1 f1 fcx2 f2 in
       unframe fr f0
   | _, Some ({fconn = BANG ; _} as fr, fcx2) ->
-      if not (is_qm fcx1 f1) then raise (Promotion (subst fcx1 f1)) ;
+      if not (is_qm fcx1 f1) then raise Stuck ;
       let f0 = resolve_mpar fcx1 f1 fcx2 f2 in
       unframe fr f0
   (* The following are supposedly unreachable states *)
@@ -888,19 +858,19 @@ module C : sig val forms : form list ref end = struct
     fright = List.map dual fr.fright ;
   }
 
-  let tens     = mk Tens
-  let one      = mk One []
-  let plus     = mk Plus
-  let zero     = mk Zero []
-  let par      = mk Par
-  let bot      = mk Bot []
-  let wth      = mk With
-  let top      = mk Top []
-  let all x f  = mk (All (intern x)) [f]
-  let ex x f   = mk (Ex (intern x)) [f]
-  let bang f   = mk Bang [f]
-  let qm f     = mk Qm [f]
-  let mpar f g = mk Mpar [f; g]
+  let tens     = conn Tens
+  let one      = conn One []
+  let plus     = conn Plus
+  let zero     = conn Zero []
+  let par      = conn Par
+  let bot      = conn Bot []
+  let wth      = conn With
+  let top      = conn Top []
+  let all x f  = conn (All (intern x)) [f]
+  let ex x f   = conn (Ex (intern x)) [f]
+  let bang f   = conn Bang [f]
+  let qm f     = conn Qm [f]
+  let mpar f g = conn Mpar [f; g]
 
   let atom p ts = Atom (ASSERT, intern p, ts)
   let natm p ts = Atom (REFUTE, intern p, ts)
@@ -930,19 +900,12 @@ module C : sig val forms : form list ref end = struct
                      plus [a' ; b']]] |> push
   let f0 = rule_int [0 ; 0] [1 ; 0 ; 0] f0 |> push
   let f0 = resolve_mpar f0 |> push
-  let f0 = rule_int [0 ; 1 ; 1]  [0 ; 1 ; 0 ; 1] f0 |> push
-  let f0 = resolve_mpar f0 |> push
-  let f0 = rule_int [0 ; 0] [1 ; 1] f0 |> push
-  let f0 = resolve_mpar f0 |> push
-  let f0 = rule_int [1 ; 0] [1 ; 1 ; 0] f0 |> push
-  let f0 = resolve_mpar f0 |> push
-  (* let r0 = go_top (resolve_mpar i0) |> push *)
-  (* let i1 = rule_int [0 ; 1 ; 0 ; 1] [0 ; 1 ; 1] r0 *)
-  (* let r1 = go_top (resolve_mpar i1) |> push *)
-  (* let i2 = rule_int [0 ; 0] [1 ; 1] r1 *)
-  (* let r2 = go_top (resolve_mpar i2) |> push *)
-  (* let i3 = rule_int [1 ; 0] [1 ; 1 ; 0] r2 *)
-  (* let r3 = go_top (resolve_mpar i3) |> push *)
+  (* let f0 = rule_int [0 ; 1 ; 1]  [0 ; 1 ; 0 ; 1] f0 |> push *)
+  (* let f0 = resolve_mpar f0 |> push *)
+  (* let f0 = rule_int [0 ; 0] [1 ; 1] f0 |> push *)
+  (* let f0 = resolve_mpar f0 |> push *)
+  (* let f0 = rule_int [1 ; 0] [1 ; 1 ; 0] f0 |> push *)
+  (* let f0 = resolve_mpar f0 |> push *)
 
   (* let f0 = par [ex "x" (all "y" (plus [natm "p" [idx 1] ; *)
   (*                                      atom "p" [idx 0]])) ; *)
