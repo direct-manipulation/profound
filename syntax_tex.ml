@@ -13,14 +13,19 @@ open Traversal
 
 let add_idt buf i = add_string buf (Idt.rep i)
 
-let rec pp_term cx buf t =
+let add_fun kon buf f =
+  if kon then add_string buf "\\mathsf{" ;
+  add_idt buf f ;
+  if kon then add_string buf "}"
+
+let rec pp_term ?(kon = true) cx buf t =
   begin match t with
   | Idx n ->
       add_idt buf (List.nth cx n)
   | App (f, []) ->
-      add_idt buf f
+      add_fun kon buf f
   | App (f, ts) ->
-      add_idt buf f ;
+      add_fun kon buf f ;
       add_string buf "(" ;
       pp_terms cx buf ts ;
       add_string buf ")"
@@ -45,7 +50,7 @@ let rec pp_form cx buf f =
           pp_term cx buf s ;
           add_string buf " = " ;
           pp_term cx buf t
-      | _ -> pp_term cx buf (App (p, ts))
+      | _ -> pp_term ~kon:false cx buf (App (p, ts))
       end
   | Atom (REFUTE, p, ts) ->
       begin match Idt.rep p, ts with
@@ -55,7 +60,7 @@ let rec pp_form cx buf f =
           pp_term cx buf t
       | _ -> 
           add_string buf "\\lnot " ;
-          pp_term cx buf (App (p, ts)) ;
+          pp_term ~kon:false cx buf (App (p, ts)) ;
       end
   | Conn (Mark ARG, [f]) ->
       add_string buf "\\hl{\\pmb\\{" ;
