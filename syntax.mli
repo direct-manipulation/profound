@@ -55,30 +55,6 @@ val unsubst : form -> fcx * form
 val unframe : frame -> form -> form
 val head1 : form -> form
 
-type traversal_error =
-  | At_leaf
-  | At_top
-  | At_edge
-  | No_such_child
-
-exception Traversal of traversal_error
-
-val go_down : int -> form -> form
-val go_up : form -> form
-val go_top : form -> form
-val go_left : form -> form
-val go_right : form -> form
-
-type trail = int list
-val descend : trail -> form -> form
-
-exception Stuck
-exception Already_marked
-
-val make_lnk : mkind -> form -> form
-val unlnk : form -> form
-val resolve_mpar : form -> form
-
-exception Rule_int of form
-val rule_int : trail -> trail -> form -> form
-
+val free_term : int -> term -> bool
+val free_form : int -> form -> bool
+val free_fcx : int -> fcx -> form -> bool

@@ -1,6 +1,6 @@
 TARGET := profound
 
-OCB := ocamlbuild -classic-display -use-ocamlfind
+OCB := ocamlbuild -use-ocamlfind
 
 .PHONY: all clean top
 

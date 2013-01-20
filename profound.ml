@@ -6,7 +6,7 @@
 
 module Must = struct
   include Idt
-  include Syntax
+  include Rest
 end
 
 let () =
