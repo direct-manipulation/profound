@@ -2,7 +2,7 @@
 
 Profound is an experiment in formula linking as an interaction method.
 
-> Author: Kaustuv Chaudhuri <kaustuv.chaudhuri@inria.fr>
+> Author: Kaustuv Chaudhuri <kaustuv.chaudhuri@inria.fr>  
 > Copyright 2013  INRIA
 
 See the file LICENSE for licensing details
