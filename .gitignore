@@ -1,4 +1,3 @@
-syntax:glob
 _build
 version.ml
 *.native
