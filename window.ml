@@ -86,33 +86,23 @@ let mod_to_string m =
   end
 
 let log_mods mods =
-  Log.(log DEBUG "Mods: [%s]"
+  Log.(log TRACE "Mods: [%s]"
          (String.concat "," (List.map mod_to_string mods)))
 
 let kmap = ref Map.empty
 
-let rec y_or_n handle_y key =
-  let open GdkKeysyms in
-  let ksym = GdkEvent.Key.keyval key in
-  if ksym = _y || ksym = _Y then begin
-    handle_y () ;
-    gui.stxt#pop () ;
-    true
-  end else if ksym = _n || ksym = _N then begin
-    ignore (gui.win#event#connect#key_press ~callback:handle_key) ;
-    gui.stxt#pop () ;
-    true
-  end else begin
-    false
-  end
-
-and handle_key key =
+let rec handle_key key =
   begin 
     let ksym = GdkEvent.Key.keyval key in
-    Log.(log DEBUG "handle_key/ksym: 0x%04x" ksym) ;
+    Log.(log TRACE "handle_key/ksym: 0x%04x" ksym) ;
     let mods = GdkEvent.Key.state key in
     log_mods mods ;
-    Map.mem ksym !kmap && (Map.find ksym !kmap) mods
+    if Map.mem ksym !kmap then
+      (Map.find ksym !kmap) mods
+    else begin
+      Log.(log DEBUG "dropped key: 0x%04x" ksym) ;
+      false
+    end
   end
 
 let key_down _ =
@@ -264,6 +254,11 @@ let key_enter mods =
   | Traversal _ -> ()) ;
   true
 
+let key_escape mods =
+  Log.(log INFO "ESCAPE out of current scope") ;
+  rewrite_cur ~mmode:NO_MARKS (Traversal.cleanup gui.cur) ;
+  true
+
 let key_z mods =
   Traversal.(try begin
     if List.mem `CONTROL mods then begin
@@ -278,6 +273,23 @@ let key_z mods =
   | Traversal _ -> ()) ;
   true
 
+let really_quit () =
+  let dwin = GWindow.dialog
+    ~parent:gui.win
+    ~title:"Quit confirmation"
+    ~modal:true
+    ~position:`CENTER_ON_PARENT () in
+  let hbox = GPack.hbox ~border_width:10 ~packing:dwin#vbox#add () in
+  let _label = GMisc.label
+    ~text:"Proof has not been saved."
+    ~packing:hbox#add () in
+  dwin#add_button "Don't quit" `CANCEL ;
+  dwin#add_button "Quit without saving" `OK ;
+  dwin#set_default_response `CANCEL ;
+  let resp = dwin#run () in
+  dwin#destroy () ;
+  resp = `OK
+
 let key_q mods =
   Traversal.(try begin
     if List.mem `CONTROL mods then begin
@@ -285,9 +297,7 @@ let key_q mods =
       | [] ->
           GMain.Main.quit ()
       | _ -> begin
-        ignore (gui.stxt#push
-                  "Quit without saving [y/n]?") ;
-        ignore (gui.win#event#connect#key_press ~callback:(y_or_n GMain.Main.quit))
+        if really_quit () then gui.win#destroy ()
       end
     end
   end with
@@ -307,6 +317,7 @@ let () =
     _Return, key_enter ;
     _KP_Enter, key_enter ;
     _Delete, key_delete ;
+    _Escape, key_escape ;
     _z, key_z ;
     _Z, key_z ;
     _q, key_q ;
