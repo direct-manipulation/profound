@@ -150,7 +150,7 @@ let key_delete _ =
   Traversal.(
     let (fcx, f) = unsubst gui.cur in
     if Rules.has_lnk f then begin
-      flash "cannot delete a subformula with a mark"
+      flash "Cannot delete a subformula with a mark"
     end else begin
       match f with
       | Conn (Qm, _) ->
@@ -161,7 +161,7 @@ let key_delete _ =
               let f = conn Plus (fr.fleft @ fr.fright) in
               rewrite_cur ~log:true (subst fcx f)
           | _ ->
-              flash "no rules allow deletion of this subformula"
+              flash "No rules allow deletion of this subformula"
           end
     end) ;
   true
@@ -175,7 +175,10 @@ let key_enter mods =
       match f with
       | Conn (Qm, _) ->
           begin
-            rewrite_cur ~log:true (subst fcx (conn Par [f ; f]))
+            if Rules.has_lnk f then
+              flash "Cannot contract a formula with a mark"
+            else
+              rewrite_cur ~log:true (subst fcx (conn Par [f ; f]))
           end
       | Conn (Ex x, [fb]) -> begin
           let dwin = GWindow.dialog

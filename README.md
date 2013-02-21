@@ -1,9 +1,9 @@
 # Profound 0.3 Alpha
 
-Profound is an experiment in formula linking as an interaction method.
+[Profound][phome] is an experiment in formula linking as an interaction method.
 
 > Author: Kaustuv Chaudhuri <kaustuv.chaudhuri@inria.fr>  
-> Copyright 2013  INRIA
+> Copyright 2013  INRIA  
 
 See the file LICENSE for licensing details
 
@@ -17,12 +17,15 @@ Profound can be downloaded from GitHub:
 
 You will need:
 
-* OCaml version 3.12.1 or later
-* ocaml-findlib
-* OCaml Batteries Included
-* pcre-ocaml
-* LablGTK2
+* [OCaml] version 3.12.1 or later
+* [ocaml-findlib][findlib]
+* [OCaml Batteries Included][batteries]
+* [pcre-ocaml][pcre]
+* [LablGTK2][lablgtk]
 * A LaTeX distribution (eg. TeXLive) that contains AMS Math and dvipng
+
+Please consider using [OPAM] to install OCaml and the above libraries.
+Latest version of everything preferred.
 
 This will probably only work on a Linux system.
 
@@ -111,13 +114,16 @@ system.
 
 ### 4.5. Other interactions
 
-If the current subformula is a ?-formula, then:
+If the current subformula is a ?-formula and has no marks in any subformula, then:
 
 - `Shift-Return` / `Shift-Enter` contracts it, i.e, it rewrites ?A to ?A
   \par ?A.
 
-- `Delete` applies weakening to it, i.e., it rewrites ?A to \bot
+- `Delete` applies weakening to it, i.e., it rewrites ?A to \bot.
 
+If the current subformula is an operand of Plus, then:
+
+- `Delete` deletes the subformula if it has no marks in any of its subformulas.
 
 If the current subformula is an existential, then:
 
@@ -126,3 +132,11 @@ If the current subformula is an existential, then:
   in scope of the existential -- these will be captured. All free
   identifiers in the witness terms are assumed to be signature
   constants, and are displayed in a different (sans-serif) font.
+
+[phome]: http://chaudhuri.info/software/profound/
+[OCaml]: http://caml.inria.fr/ocaml
+[findlib]: http://projects.camlcity.org/projects/findlib.html
+[batteries]: http://batteries.forge.ocamlcore.org/
+[pcre]: https://bitbucket.org/mmottl/pcre-ocaml
+[lablgtk]: http://lablgtk.forge.ocamlcore.org/
+[OPAM]: http://opam.ocamlpro.com/
