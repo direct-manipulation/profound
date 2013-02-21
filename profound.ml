@@ -71,7 +71,7 @@ let parse_opts () =
 let main () =
   let txt = String.trim (parse_opts ()) in
   Log.to_stdout () ;
-  Log.(log INFO "Profound %s START" Version.str) ;
+  Log.(log INFO "Profound %s [%s] START" Version.str Version.built) ;
   ignore (GMain.init ()) ;
   Log.(log INFO "GTK+ Initialized") ;
   let frm =

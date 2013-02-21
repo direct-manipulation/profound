@@ -11,11 +11,11 @@ open Syntax
 let wash_file = "tex/wash_form1.png"
 
 let form_to_pixbuf cur his =
-  if Syntax_tex.wash_forms cur (List.map fst his) <> 0 then None else
-    try
-      let img = GdkPixbuf.from_file wash_file in
-      Some img
-    with _ -> None
+  Syntax_tex.wash_forms cur (List.map fst his) ;
+  try
+    let img = GdkPixbuf.from_file wash_file in
+    Some img
+  with _ -> None
 
 type mark_mode =
   | NO_MARKS

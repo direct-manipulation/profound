@@ -219,5 +219,8 @@ let wash_forms ?(cx = []) cur his =
   let ch = open_out "/tmp/profound-render.tex" in
   output_string ch (Buffer.contents buf) ;
   close_out ch ;
-  Sys.command wash_command
+  if Sys.command wash_command <> 0 then begin
+    Log.(log FATAL "Cannot run LaTeX and/or dvipng successfully") ;
+    exit 4 (* random exit code *)
+  end
 
