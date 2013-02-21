@@ -116,10 +116,10 @@ let rec pp_form cx buf f =
       add_string buf (bin_string p) ;
       pp_check_bracket ~p cx buf g
   | Conn ((All x | Ex x) as p, [f]) ->
-      add_string buf (un_string p) ;
+      add_un buf p ;
       pp_check_bracket ~p (x :: cx) buf f
   | Conn (p, [f]) ->
-      add_string buf (un_string p) ;
+      add_un buf p ;
       pp_check_bracket ~p cx buf f ;
   | Conn (p, []) ->
       add_string buf (kon_string p)
@@ -177,11 +177,17 @@ and bin_string = function
   | Mpar -> " \\MPAR "
   | _ -> assert false
 
-and un_string = function
-  | All x -> "\\ALL " ^ Idt.rep x ^ ". "
-  | Ex x -> "\\EX " ^ Idt.rep x ^ ". "
-  | Bang -> "\\BANG "
-  | Qm -> "\\QM "
+and add_un buf = function
+  | All x ->
+      add_string buf "\\ALL " ;
+      add_var buf x ;
+      add_string buf ". "
+  | Ex x ->
+      add_string buf "\\EX " ;
+      add_var buf x ;
+      add_string buf ". "
+  | Bang -> add_string buf "\\BANG "
+  | Qm -> add_string buf "\\QM "
   | _ -> assert false
 
 and kon_string = function
