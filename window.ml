@@ -316,10 +316,11 @@ let () =
 let startup f =
   gui.cur <- f ;
   let win = GWindow.window
-    ~title:(Printf.sprintf "Profound %s" Version.str)
+    ~title:"Profound"
     ~border_width:3
     ~deletable:true () in
   gui.win <- win ;
+  win#misc#set_size_request ~width:800 ~height:600 () ;
   win#misc#modify_bg [`NORMAL, `NAME "ivory" ] ;
   ignore (win#event#connect#delete ~callback:(fun _ -> false)) ;
   ignore (win#connect#destroy ~callback:GMain.Main.quit) ;
