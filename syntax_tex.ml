@@ -201,9 +201,17 @@ and prec = function
   | Bang | Qm -> 6
   | One | Zero | Top | Bot | Mark _ -> max_int
 
-let wash_command =
-  "( cd tex  && latex '\\nonstopmode\\input wash_form.tex' && dvipng -D 240 -T tight -bg transparent -z 9 wash_form.dvi )"
-  ^ ">/dev/null 2>&1"
+let wash_command = ref ""
+
+let set_dpi d =
+  Log.(log INFO "Setting DPI to %d" d) ;
+  if d < 75 || d > 240 then
+    Log.(log WARN "Unusual DPI: %d" d) ;
+  wash_command := Printf.sprintf
+    "( cd tex  && latex '\\nonstopmode\\input wash_form.tex' && dvipng -D %d -T tight -bg transparent -z 9 wash_form.dvi ) %s"
+    d ">/dev/null 2>&1"
+
+let () = set_dpi 120
 
 let wash_forms ?(cx = []) cur his =
   let buf = Buffer.create 19 in
@@ -219,7 +227,7 @@ let wash_forms ?(cx = []) cur his =
   let ch = open_out "/tmp/profound-render.tex" in
   output_string ch (Buffer.contents buf) ;
   close_out ch ;
-  if Sys.command wash_command <> 0 then begin
+  if Sys.command !wash_command <> 0 then begin
     Log.(log FATAL "Cannot run LaTeX and/or dvipng successfully") ;
     exit 4 (* random exit code *)
   end

@@ -320,7 +320,12 @@ let startup f =
     ~border_width:3
     ~deletable:true () in
   gui.win <- win ;
-  win#misc#set_size_request ~width:800 ~height:600 () ;
+  let sw = Gdk.Screen.width () in
+  let sh = Gdk.Screen.height () in
+  (* [HACK] *)
+  Log.(log INFO "Screen: %d x %d" sw sh) ;
+  if sw > 1920 || sh > 1080 then Syntax_tex.set_dpi 240 ;
+  win#misc#set_size_request ~width:(sw * 3/5) ~height:(sh * 4/5) () ;
   win#misc#modify_bg [`NORMAL, `NAME "ivory" ] ;
   ignore (win#event#connect#delete ~callback:(fun _ -> false)) ;
   ignore (win#connect#destroy ~callback:GMain.Main.quit) ;
