@@ -93,6 +93,7 @@ let mk_kon c fs =
 
 let mk_tens fs =
   begin match fs with
+  | [f] -> f
   | [Conn (One, []) ; f]
   | [f ; Conn(One, [])] ->
       f
@@ -103,6 +104,7 @@ let mk_tens fs =
 
 let mk_plus fs =
   begin match fs with
+  | [f] -> f
   | [Conn (Zero, []) ; f]
   | [f ; Conn (Zero, [])] ->
       f
@@ -115,6 +117,7 @@ let mk_plus fs =
 
 let mk_par fs =
   begin match fs with
+  | [f] -> f
   | [Conn (Bot, []) ; f]
   | [f ; Conn (Bot, [])] ->
       f
@@ -128,6 +131,7 @@ let mk_par fs =
 
 let mk_with fs =
   begin match fs with
+  | [f] -> f
   | [Conn (Top, []) ; f]
   | [f ; Conn (Top, [])] ->
       f

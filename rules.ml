@@ -8,10 +8,13 @@ open Batteries
 open Log
 
 open Syntax
+open Syntax_tex
+
 open Traversal
 
 type rule_error =
   | Stuck
+  | Promotion
   | Not_par
   | Already_marked
 
@@ -36,23 +39,22 @@ let rec bang_free fcx =
   | Some (_, fcx) -> bang_free fcx
   end
 
+let maybe_eq t1 t2 =
+  if t1 = t2 then conn One [] else
+    atom ASSERT equals [t1 ; t2]
+
 let rec equate ts1 ts2 =
   begin match ts1, ts2 with
-  | [], [] -> conn One []
+  | [], [] ->
+      conn One []
   | [t1], [t2] ->
-      atom ASSERT (Idt.intern "=") [t1 ; t2]
+      maybe_eq t1 t2
   | (t1 :: ts1), (t2 :: ts2) ->
-      conn Tens [ atom ASSERT (Idt.intern "=") [t1 ; t2]
+      conn Tens [ maybe_eq t1 t2
                 ; equate ts1 ts2 ]
   | _ ->
       conn Bot []
   end
-
-let freshen =
-  let last = ref 0 in
-  fun x ->
-    incr last ;
-    Idt.intern (Idt.rep x ^ "_" ^ string_of_int !last)
 
 let rec reduce_choices fcx f =
   begin match Deque.front fcx with
@@ -128,13 +130,8 @@ let link_normal_form f =
 
 let make_lnk dir f =
   let (fcx, f) = unsubst f in
-  assert (try ignore (find_lnk f) ; false with Not_found -> true) ;
-  begin match f with
-  | Conn (Mark (SRC | SNK), _) -> rulefail Already_marked
-  | _ ->
-      let f = conn (Mark dir) [f] in
-      subst fcx f
-  end
+  if has_lnk f then rulefail Already_marked ;
+  subst fcx (conn (Mark dir) [f])
 
 let unlnk f =
   begin match f with
@@ -187,13 +184,13 @@ let rec resolve_mpar fcx1 f1 fcx2 f2 =
       } in
       unframe fr f0
   | Some ({fconn = ALL x ; _} as fr, fcx1), _ ->
-      let fr = { fr with fconn = ALL (freshen x) } in
+      let fr = { fr with fconn = ALL (salt x) } in
       let (fcx2, ss) = sub_fcx (Shift 1) fcx2 in
       let f2 = sub_form ss f2 in
       let f0 = resolve_mpar fcx1 f1 fcx2 f2 in
       unframe fr f0
   | _, Some ({fconn = ALL x ; _} as fr, fcx2) ->
-      let fr = { fr with fconn = ALL (freshen x) } in
+      let fr = { fr with fconn = ALL (salt x) } in
       let (fcx1, ss) = sub_fcx (Shift 1) fcx1 in
       let f1 = sub_form ss f1 in
       let f0 = resolve_mpar fcx1 f1 fcx2 f2 in
@@ -216,36 +213,36 @@ let rec resolve_mpar fcx1 f1 fcx2 f2 =
   | Some ({fconn = EX x1 ; _} as fr1, fcx1d),
     Some ({fconn = EX x2 ; _} as fr2, fcx2d) ->
       if is_src f1 then begin
-        let fr2 = { fr2 with fconn = EX (freshen x2) } in
+        let fr2 = { fr2 with fconn = EX (salt x2) } in
         let (fcx1, ss) = sub_fcx (Shift 1) fcx1 in
         let f1 = sub_form ss f1 in
         let f0 = resolve_mpar fcx1 f1 fcx2d f2 in
         unframe fr2 f0
       end else begin
-        let fr1 = { fr1 with fconn = EX (freshen x1) } in
+        let fr1 = { fr1 with fconn = EX (salt x1) } in
         let (fcx2, ss) = sub_fcx (Shift 1) fcx2 in
         let f2 = sub_form ss f2 in
         let f0 = resolve_mpar fcx1d f1 fcx2 f2 in
         unframe fr1 f0
       end
   | Some ({fconn = EX x ; _} as fr, fcx1), _ ->
-      let fr = { fr with fconn = EX (freshen x) } in
+      let fr = { fr with fconn = EX (salt x) } in
       let (fcx2, ss) = sub_fcx (Shift 1) fcx2 in
       let f2 = sub_form ss f2 in
       let f0 = resolve_mpar fcx1 f1 fcx2 f2 in
       unframe fr f0
   | _, Some ({fconn = EX x ; _} as fr, fcx2) ->
-      let fr = { fr with fconn = EX (freshen x) } in
+      let fr = { fr with fconn = EX (salt x) } in
       let (fcx1, ss) = sub_fcx (Shift 1) fcx1 in
       let f1 = sub_form ss f1 in
       let f0 = resolve_mpar fcx1 f1 fcx2 f2 in
       unframe fr f0
   | Some ({fconn = BANG ; _} as fr, fcx1), _ ->
-      if not (is_qm fcx2 f2) then rulefail Stuck ;
+      if not (is_qm fcx2 f2) then rulefail Promotion ;
       let f0 = resolve_mpar fcx1 f1 fcx2 f2 in
       unframe fr f0
   | _, Some ({fconn = BANG ; _} as fr, fcx2) ->
-      if not (is_qm fcx1 f1) then rulefail Stuck ;
+      if not (is_qm fcx1 f1) then rulefail Promotion ;
       let f0 = resolve_mpar fcx1 f1 fcx2 f2 in
       unframe fr f0
   (* The following are supposedly unreachable states *)

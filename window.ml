@@ -40,6 +40,9 @@ let gui : gui = {
   stxt = Obj.magic 0 ;
 }
 
+let flash fmt =
+  Printf.ksprintf (gui.stxt#flash ~delay:1500) fmt
+
 let redisplay () =
   gui.stxt#pop () ;
   begin match form_to_pixbuf gui.cur gui.hist with
@@ -54,6 +57,12 @@ let redisplay () =
       end in
       ()
   end
+
+let rewrite_cur ?(log = false) ?mmode f =
+  if log then gui.hist <- (gui.cur, gui.mmode) :: gui.hist ;
+  gui.cur <- f ;
+  (match mmode with Some mmode -> gui.mmode <- mmode | None -> ()) ;
+  redisplay ()
 
 let mod_to_string m =
   begin match m with
@@ -109,45 +118,53 @@ and handle_key key =
 let key_down _ =
   Traversal.(
     try
-      let f = Traversal.go_down 0 gui.cur in
-      gui.cur <- f ;
-      redisplay () ;
-      true
+      rewrite_cur (go_down 0 gui.cur)
     with
     | Traversal At_leaf ->
-        gui.stxt#flash "Cannot descend further" ;
-        true
-    | Traversal _ -> false)
+        flash "Cannot descend further"
+    | Traversal _ -> ()) ;
+  true
 
 let key_up mods =
   Traversal.(
   let go_fn = if List.mem `SHIFT mods then go_top else go_up in
-  try
-    let f = go_fn gui.cur in
-    gui.cur <- f ;
-    redisplay () ;
-    true
-  with
+  try rewrite_cur (go_fn gui.cur) with
   | Traversal At_top ->
-      gui.stxt#flash "Cannot ascend further" ;
-      true
-  | Traversal _ -> false)
+      flash "Cannot ascend further"
+  | Traversal _ -> ()) ;
+  true
 
 let key_left _ =
   Traversal.(try begin
-    let f = go_left gui.cur in
-    gui.cur <- f ;
-    redisplay () ;
-    true
-  end with Traversal _ -> false)
+    rewrite_cur (go_left gui.cur)
+  end with Traversal _ -> ()) ;
+  true
 
 let key_right _ =
   Traversal.(try begin
-    let f = go_right gui.cur in
-    gui.cur <- f ;
-    redisplay () ;
-    true
-  end with Traversal _ -> false)
+    rewrite_cur (go_right gui.cur)
+  end with Traversal _ -> ()) ;
+  true
+
+let key_delete _ =
+  Traversal.(
+    let (fcx, f) = unsubst gui.cur in
+    if Rules.has_lnk f then begin
+      flash "cannot delete a subformula with a mark"
+    end else begin
+      match f with
+      | Conn (Qm, _) ->
+          rewrite_cur ~log:true (subst fcx (conn Bot []))
+      | _ -> 
+          begin match Deque.rear fcx with
+          | Some (fcx, ({fconn = PLUS ; _} as fr)) ->
+              let f = conn Plus (fr.fleft @ fr.fright) in
+              rewrite_cur ~log:true (subst fcx f)
+          | _ ->
+              flash "no rules allow deletion of this subformula"
+          end
+    end) ;
+  true
 
 exception Silently_fail
 
@@ -156,10 +173,14 @@ let key_enter mods =
     if List.mem `SHIFT mods then begin
       let (fcx, f) = unsubst gui.cur in
       match f with
+      | Conn (Qm, _) ->
+          begin
+            rewrite_cur ~log:true (subst fcx (conn Par [f ; f]))
+          end
       | Conn (Ex x, [fb]) -> begin
           let dwin = GWindow.dialog
             ~parent:gui.win
-            ~title:"Enter a witness"
+            ~title:"Witness input"
             ~modal:true
             ~position:`CENTER_ON_PARENT () in
           dwin#vbox#misc#set_size_request ~width:640 () ;
@@ -167,7 +188,7 @@ let key_enter mods =
           dwin#add_button_stock `CANCEL `CANCEL ;
           let lab = GMisc.label ~xalign:0.
             ~packing:(dwin#vbox#pack ~expand:false) () in
-          let msg = "Enter a witness for " ^ (Idt.rep x) ^ "\n" in
+          let msg = "Enter a witness term to replace " ^ (Idt.rep x) ^ ":\n" in
           lab#set_text msg ;
           let ebox = GEdit.entry ~text:""
             ~width:80
@@ -186,31 +207,26 @@ let key_enter mods =
           begin match resp with
           | `OK ->
               begin match Syntax_prs.parse_term (fcx_vars fcx) txt with
-              | Prs.Read (t, lpos) when lpos = String.length txt ->
+              | Prs.Read t ->
                   let ss = Dot (Shift 0, t) in
                   let fb = sub_form ss fb in
                   let f = subst fcx fb in
-                  gui.hist <- (gui.cur, gui.mmode) :: gui.hist ;
-                  gui.cur <- f ;
-                  redisplay ()
+                  rewrite_cur ~log:true f
               | _ ->
-                  gui.stxt#flash (Printf.sprintf "Could not parse: %S" txt) ;
+                  flash "Could not parse: %S" txt ;
                   ()
               end
-          | _ -> gui.stxt#flash "Cancelled witness"
-          end ;
-          true
+          | _ -> flash "Cancelled witness"
+          end
       end
-      | _ -> false
+      | _ -> ()
     end else begin
       let (fcx, f) = unsubst gui.cur in
       match f with
       | Conn (Mark SRC, [_]) when gui.mmode = HAS_SRC ->
           Log.(log DEBUG "Hit enter on a source-marked subformula") ;
-          gui.cur <- subst fcx (Rules.unlnk f) ;
-          gui.mmode <- NO_MARKS ;
-          redisplay () ;
-          true
+          rewrite_cur ~mmode:NO_MARKS (subst fcx (Rules.unlnk f)) ;
+          flash "Source mark removed"
       | _ ->
           let (mrk, mmode) = match gui.mmode with
           | NO_MARKS -> (SRC, HAS_SRC)
@@ -219,60 +235,61 @@ let key_enter mods =
               Log.(log ERROR "Apparently both marks exist -- this is impossible!") ;
               raise Silently_fail
           in
-          let (f0, m0, h0) = (gui.cur, gui.mmode, gui.hist) in
           try (
-            gui.cur <- Rules.make_lnk mrk gui.cur ;
+            let f0 = Rules.make_lnk mrk gui.cur in
             begin match mmode with
             | HAS_BOTH ->
-                gui.cur <- Rules.resolve_mpar gui.cur ;
-                gui.hist <- (f0, gui.mmode) :: gui.hist ;
-                gui.mmode <- NO_MARKS
+                rewrite_cur ~log:true ~mmode:NO_MARKS (Rules.resolve_mpar f0)
             | _ ->
-                gui.mmode <- mmode
-            end ;
-            redisplay () ;
-            true
-          ) with Rules.Rule_failure _ ->
-            gui.stxt#flash "Cannot make this subformula" ;
-            gui.cur <- f0 ;
-            gui.mmode <- m0 ;
-            gui.hist <- h0 ;
-            false
+                rewrite_cur ~mmode f0
+            end
+          ) with Rules.Rule_failure reason  ->
+            flash "Cannot mark here: %s" begin
+              match reason with
+              | Rules.Promotion -> "invalid promotion"
+              | Rules.Not_par ->
+                  "not linked to source via an ancestral par"
+              | Rules.Already_marked ->
+                  "a strict subformula already has a mark"
+              | Rules.Stuck ->
+                  Log.(log ERROR "Got stuck!") ;
+                  "the system does not know how to handle this source/sink pair (BUG -- please report!)"
+            end
     end
   end with
-  | Silently_fail -> false
-  | Traversal _ -> false)
+  | Silently_fail
+  | Traversal _ -> ()) ;
+  true
 
 let key_z mods =
   Traversal.(try begin
     if List.mem `CONTROL mods then begin
       match gui.hist with
-      | [] -> false
+      | [] ->
+          flash "No history left to undo"
       | (cur, mmode) :: hist ->
-          gui.cur <- cur ;
-          gui.mmode <- mmode ;
           gui.hist <- hist ;
-          redisplay () ;
-          true
-    end else false
+          rewrite_cur ~mmode cur
+    end
   end with
-  | Traversal _ -> false)
+  | Traversal _ -> ()) ;
+  true
 
 let key_q mods =
   Traversal.(try begin
     if List.mem `CONTROL mods then begin
       match gui.hist with
       | [] ->
-          GMain.Main.quit () ; true
+          GMain.Main.quit ()
       | _ -> begin
         ignore (gui.stxt#push
                   "Quit without saving [y/n]?") ;
-        ignore (gui.win#event#connect#key_press ~callback:(y_or_n GMain.Main.quit)) ;
-        true
+        ignore (gui.win#event#connect#key_press ~callback:(y_or_n GMain.Main.quit))
       end
-    end else false
+    end
   end with
-  | Traversal _ -> false)
+  | Traversal _ -> ()) ;
+  true
 
 let () =
   let open GdkKeysyms in
@@ -286,6 +303,7 @@ let () =
     _Right, key_right ;
     _Return, key_enter ;
     _KP_Enter, key_enter ;
+    _Delete, key_delete ;
     _z, key_z ;
     _Z, key_z ;
     _q, key_q ;

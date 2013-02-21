@@ -10,6 +10,8 @@ type term =
   | Idx of int
   | App of Idt.t * term list
 
+val equals : Idt.t
+
 type sign = ASSERT | REFUTE
 
 type form = private

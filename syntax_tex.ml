@@ -11,16 +11,46 @@ open Printf
 open Syntax
 open Traversal
 
+let is_int s =
+  let rec scan = function
+    | 0 -> true
+    | n -> Char.is_digit s.[n] && scan (n - 1)
+  in
+  scan (String.length s - 1)
+
+let unsalt ?(rejoin = "_") xr = 
+  let comps = String.nsplit ~by:"_" xr in
+  begin match comps with
+  | [xr] -> (xr, None)
+  | _ ->
+      begin match List.split_at (List.length comps - 1) comps with
+      | (inits, [salt]) when is_int salt ->
+          (String.concat rejoin inits, Some salt)
+      | _ ->
+          (String.concat rejoin comps, None)
+      end
+  end
+
+let salt =
+  let last = ref 0 in
+  fun x ->
+    incr last ;
+    let (xr, _) = unsalt (Idt.rep x) in
+    Idt.intern (xr ^ "_" ^ string_of_int !last)
+
 let add_idt buf i = add_string buf (Idt.rep i)
 
 let add_var buf v =
   let vr = Idt.rep v in
   try begin
-    let (main, sub) = String.split vr ~by:"_" in
+    let (main, salt) = unsalt ~rejoin:"\\_" vr in
     add_string buf main ;
-    add_string buf "_{" ;
-    add_string buf sub ;
-    add_string buf "}"
+    match salt with
+    | None -> ()
+    | Some salt ->
+        add_string buf "_{" ;
+        add_string buf salt ;
+        add_string buf "}"
   end with Not_found -> add_string buf vr
 
 let add_fun kon buf f =
@@ -73,9 +103,9 @@ let rec pp_form cx buf f =
           pp_term ~kon:false cx buf (App (p, ts)) ;
       end
   | Conn (Mark ARG, [f]) ->
-      add_string buf "\\hl{\\pmb\\{" ;
+      add_string buf "\\hl{\\left\\{" ;
       pp_form cx buf f ;
-      add_string buf "\\pmb\\}}"
+      add_string buf "\\right\\}}"
   | Conn (Mark (SRC | SNK as dir), [f]) ->
       bprintf buf "{\\color{%s}"
         (match dir with SRC -> "src" | _ -> "dst") ;
@@ -171,6 +201,10 @@ and prec = function
   | Bang | Qm -> 6
   | One | Zero | Top | Bot | Mark _ -> max_int
 
+let wash_command =
+  "( cd tex  && latex '\\nonstopmode\\input wash_form.tex' && dvipng -D 240 -T tight -bg transparent -z 9 wash_form.dvi )"
+  ^ ">/dev/null 2>&1"
+
 let wash_forms ?(cx = []) cur his =
   let buf = Buffer.create 19 in
   add_string buf "\\cur{" ;
@@ -185,8 +219,5 @@ let wash_forms ?(cx = []) cur his =
   let ch = open_out "/tmp/profound-render.tex" in
   output_string ch (Buffer.contents buf) ;
   close_out ch ;
-  (* let suppress = "" in *)
-  let suppress = ">/dev/null 2>&1" in
-  Sys.command ("( cd tex && latex '\\nonstopmode\\input wash_form.tex' && dvipng -D 240 -T tight -bg transparent -z 9 wash_form.dvi )" ^ suppress)
-
+  Sys.command wash_command
 

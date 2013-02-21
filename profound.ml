@@ -61,16 +61,16 @@ let parse_opts () =
   end
         
 let main () =
-  let txt = parse_opts () in
+  let txt = String.trim (parse_opts ()) in
   Log.to_stdout () ;
   Log.(log INFO "Profound %s START" Version.str) ;
   ignore (GMain.init ()) ;
   Log.(log INFO "GTK+ Initialized") ;
   let frm =
     begin match Syntax_prs.parse_form txt with
-    | Prs.Read (f, _) -> f
+    | Prs.Read f -> f
     | Prs.Fail _ ->
-        Printf.eprintf "Could not parse: %S\n%!" Sys.argv.(1) ;
+        Log.(log FATAL "Could not parse theorem. Text follows:\n%s" txt) ;
         exit 1
     end in
   Window.startup frm ;
