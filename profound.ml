@@ -34,6 +34,14 @@ let parse_opts () =
   let opts = [
     "-i", String set_infile, "<file> Read theorem from <file>" ;
     "-v", Int set_verbosity, "<num> Set vebosity to <num>" ;
+    "-version", Unit (fun () ->
+      Printf.printf "Profound %s [build of %s]\n" Version.str Version.built ;
+      exit 0
+    ), " Display a version string" ;
+    "-vnum", Unit (fun () ->
+      Printf.printf "%s%!" Version.str ;
+      exit 0
+    ), " Display a version number (no newline at end)" ;
   ] in
   let opts = align opts in
   let umsg = "Usage: profound [options] (theorem | -i file)" in
