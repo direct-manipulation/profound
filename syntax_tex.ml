@@ -111,19 +111,21 @@ let rec pp_form cx buf f =
         (match dir with SRC -> "src" | _ -> "dst") ;
       pp_form cx buf f ;
       add_string buf "}"
-  | Conn (p, [f ; g]) ->
-      pp_check_bracket ~p cx buf f ;
-      add_string buf (bin_string p) ;
-      pp_check_bracket ~p cx buf g
+  | Conn (p, []) ->
+      add_string buf (kon_string p)
   | Conn ((All x | Ex x) as p, [f]) ->
       add_un buf p ;
       pp_check_bracket ~p (x :: cx) buf f
   | Conn (p, [f]) ->
       add_un buf p ;
       pp_check_bracket ~p cx buf f ;
-  | Conn (p, []) ->
-      add_string buf (kon_string p)
-  | Conn _ -> assert false
+  | Conn (p, f :: gs) ->
+      pp_check_bracket ~p cx buf f ;
+      List.iter begin
+        fun g ->
+          add_string buf (bin_string p) ;
+          pp_check_bracket ~p cx buf g
+      end gs
   | Subst (fcx, f) ->
       let f = conn (Mark ARG) [f] in
       let f = go_top (subst fcx f) in
@@ -142,7 +144,8 @@ and extend cx fcx =
 and needs_bracket p f =
   begin match head1 f with
   | Conn (Mark _, _)
-  | Atom _ -> false
+  | Atom _
+  | Conn ((Tens | Plus | With | Par), []) -> false
   | Conn (q, _) ->
       not (p = q || (is_un p && is_un q) || prec p < prec q)
   | Subst _ -> assert false
@@ -190,10 +193,10 @@ and add_un buf = function
   | _ -> assert false
 
 and kon_string = function
-  | One -> "\\ONE"
-  | Zero -> "\\ZERO"
-  | Bot -> "\\BOT"
-  | Top -> "\\TOP"
+  | Tens -> "\\ONE"
+  | Plus -> "\\ZERO"
+  | Par -> "\\BOT"
+  | With -> "\\TOP"
   | _ -> assert false
 
 and prec = function
@@ -203,7 +206,7 @@ and prec = function
   | Tens -> 1 (* 4 *)
   | Ex _ | All _ -> 0
   | Bang | Qm -> 6
-  | One | Zero | Top | Bot | Mark _ -> max_int
+  | Mark _ -> max_int
 
 let wash_command = ref ""
 

@@ -20,40 +20,40 @@ end
 and token = lazy begin
   alt [
     (fuzzy "\\tensor" <|> fuzzy "*")
-    <!> Appl (50, Infix (Left, fun f g -> conn Tens [f ; g])) ;
+    <!> Appl (50, Infix (Left, _Tens)) ;
 
     (fuzzy "\\one" <|> fuzzy "1")
-    <!> Atom (conn One []) ;
+    <!> Atom _One ;
 
     (fuzzy "\\plus" <|> fuzzy "+")
-    <!> Appl (20, Infix (Left, fun f g -> conn Plus [f ; g])) ;
+    <!> Appl (20, Infix (Left, _Plus)) ;
 
     (fuzzy "\\zero" <|> fuzzy "0")
-    <!> Atom (conn Zero []) ;
+    <!> Atom _Zero ;
 
-    fuzzy "!" <!> Appl (60, Prefix (fun f -> conn Bang [f])) ;
+    fuzzy "!" <!> Appl (60, Prefix _Bang) ;
 
     (fuzzy "\\par" <|> fuzzy "|" <|> fuzzy ",")
-    <!> Appl (30, Infix (Left, fun f g -> conn Par [f ; g])) ;
+    <!> Appl (30, Infix (Left, _Par)) ;
 
     (fuzzy "\\bot" <|> fuzzy "#F")
-    <!> Atom (conn Bot []) ;
+    <!> Atom _Bot ;
 
     (fuzzy "\\with" <|> fuzzy "&")
-    <!> Appl (40, Infix (Left, fun f g -> conn With [f ; g])) ;
+    <!> Appl (40, Infix (Left, _With)) ;
 
     (fuzzy "\\top" <|> fuzzy "#T")
-    <!> Atom (conn Top []) ;
+    <!> Atom _Top ;
 
-    fuzzy "?" <!> Appl (60, Prefix (fun f -> conn Qm [f])) ;
+    fuzzy "?" <!> Appl (60, Prefix _Qm) ;
 
     (fuzzy "\\A" <|> fuzzy "\\E")
     <*> sep1 (fuzzy ",") ident
     <<< fuzzy "."
     <$> (fun (q, vs) ->
            let qf v f = match q with
-             | "\\A" -> conn (All v) [f]
-             | _ -> conn (Ex v) [f]
+             | "\\A" -> _All v f
+             | _ -> _Ex v f
            in
            let rec mk vs f = match vs with
              | [] -> f

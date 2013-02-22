@@ -144,7 +144,7 @@ let key_delete _ =
     end else begin
       match f with
       | Conn (Qm, _) ->
-          rewrite_cur ~log:true (subst fcx (conn Bot []))
+          rewrite_cur ~log:true (subst fcx (conn Par []))
       | _ -> 
           begin match Deque.rear fcx with
           | Some (fcx, ({fconn = PLUS ; _} as fr)) ->

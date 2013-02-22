@@ -40,20 +40,20 @@ let rec bang_free fcx =
   end
 
 let maybe_eq t1 t2 =
-  if t1 = t2 then conn One [] else
+  if t1 = t2 then conn Tens [] else
     atom ASSERT equals [t1 ; t2]
 
 let rec equate ts1 ts2 =
   begin match ts1, ts2 with
   | [], [] ->
-      conn One []
+      conn Tens []
   | [t1], [t2] ->
       maybe_eq t1 t2
   | (t1 :: ts1), (t2 :: ts2) ->
       conn Tens [ maybe_eq t1 t2
                 ; equate ts1 ts2 ]
   | _ ->
-      conn Bot []
+      conn Par []
   end
 
 let rec reduce_choices fcx f =

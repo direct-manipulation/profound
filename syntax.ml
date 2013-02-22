@@ -30,7 +30,7 @@ and frame = {
 }
 
 and conn =
-  | Tens | One | Plus | Zero | Par | Bot | With | Top
+  | Tens | Plus | Par | With
   | All of idt | Ex of idt
   | Bang | Qm
   | Mark of mkind
@@ -84,109 +84,101 @@ let subst fcx f =
       else Subst (fcx, f)
   end
 
-let mk_kon c fs =
-  begin match fs with
-  | [] -> Conn (c, [])
-  | _ -> assert false
+let _One  = Conn (Tens, [])
+let _Zero = Conn (Plus, [])
+let _Bot  = Conn (Par, [])
+let _Top  = Conn (With, [])
+
+exception No_spec
+
+let monoid_normalize ?spec c un f g =
+  if f = un then g
+  else if g = un then f
+  else begin match f, g with
+  | Conn (c1, fs), Conn (c2, gs) when c1 = c && c2 = c ->
+      Conn (c, fs @ gs)
+  | Conn (c1, fs), _ when c1 = c ->
+      Conn (c, fs @ [g])
+  | f, Conn (c2, gs) when c2 = c ->
+      Conn (c, f :: gs)
+  | _ ->
+      begin match spec with
+      | Some spec ->
+          (try spec f g with No_spec -> Conn (c, [f ; g]))
+      | None -> Conn (c, [f ; g])
+      end
   end
 
-let mk_tens fs =
-  begin match fs with
-  | [f] -> f
-  | [Conn (One, []) ; f]
-  | [f ; Conn(One, [])] ->
-      f
-  | [f ; g] ->
-      Conn (Tens, [f ; g])
-  | _ -> assert false
+let rec _Tens f g = monoid_normalize Tens _One f g
+
+and _Plus f g = monoid_normalize ~spec:_Plus_spec Plus _Zero f g
+and _Plus_spec f g =
+  begin match f, g with
+  | Conn (Tens, []), Conn (Tens, []) -> _One
+  | _ -> raise No_spec
   end
 
-let mk_plus fs =
-  begin match fs with
-  | [f] -> f
-  | [Conn (Zero, []) ; f]
-  | [f ; Conn (Zero, [])] ->
-      f
-  | [Conn (One, []) ; Conn (One, [])] ->
-      Conn (One, [])
-  | [f ; g] ->
-      Conn (Plus, [f ; g])
-  | _ -> assert false
+and _Par f g = monoid_normalize ~spec:_Par_spec Par _Bot f g
+and _Par_spec f g =
+  begin match f, g with
+  | Conn (With, []), f
+  | f, Conn (With, []) -> _Top
+  | _ -> raise No_spec
   end
 
-let mk_par fs =
-  begin match fs with
-  | [f] -> f
-  | [Conn (Bot, []) ; f]
-  | [f ; Conn (Bot, [])] ->
-      f
-  | [f ; Conn (Top, [])]
-  | [Conn (Top, []) ; f] ->
-      Conn (Top, [])
-  | [f ; g] ->
-      Conn (Par, [f ; g])
-  | _ -> assert false
+and _With f g = monoid_normalize ~spec:_With_spec With _Top f g
+and _With_spec f g =
+  begin match f, g with
+  | Conn (Tens, []), Conn (Tens, []) -> _One
+  | _ -> raise No_spec
   end
 
-let mk_with fs =
-  begin match fs with
-  | [f] -> f
-  | [Conn (Top, []) ; f]
-  | [f ; Conn (Top, [])] ->
-      f
-  | [Conn (One, []) ; Conn (One, [])] ->
-      Conn (One, [])
-  | [f ; g] ->
-      Conn (With, [f ; g])
-  | _ -> assert false
-  end
-
-let mk_bang fs =
-  begin match fs with
-  | [Conn (One, [])]
-  | [Conn (Top, [])] ->
-      Conn (One, [])
-  | [f] ->
+let _Bang f =
+  begin match f with
+  | Conn (Tens, [])
+  | Conn (With, []) ->
+      _One
+  | _ ->
       Conn (Bang, [f])
-  | _ -> assert false
   end
 
-let mk_qm fs =
-  begin match fs with
-  | [Conn (Bot, [])]
-  | [Conn (Zero, [])] ->
-      Conn (Bot, [])
-  | [f] ->
+let _Qm f =
+  begin match f with
+  | Conn (Par, [])
+  | Conn (Plus, []) ->
+      _Bot
+  | _ ->
       Conn (Qm, [f])
-  | _ -> assert false
   end
 
-let mk_quant q fs =
-  begin match fs with
-  | [Conn (One, [])] -> Conn (One, [])
-  | [f] -> Conn (q, [f])
-  | _ -> assert false
+let _Q q f =
+  begin match f with
+  | Conn (Tens, []) -> _One
+  | f -> Conn (q, [f])
   end
 
-let mk_mark m fs =
+let _All x f = _Q (All x) f
+let _Ex x f = _Q (Ex x) f
+
+let _Mark m f = Conn (Mark m, [f])
+
+let mk_un fn fs =
   begin match fs with
-  | [_] -> Conn (m, fs)
+  | [f] -> fn f
   | _ -> assert false
   end
 
 let conn c =
   begin match c with
-  | Tens   -> mk_tens
-  | Plus   -> mk_plus
-  | Par    -> mk_par
-  | With   -> mk_with
-  | Bang   -> mk_bang
-  | Qm     -> mk_qm
-  | All _
-  | Ex _   -> mk_quant c
-  | Mark _ -> mk_mark c
-  | One | Zero | Bot | Top ->
-      mk_kon c
+  | Tens   -> List.fold_left _Tens _One
+  | Plus   -> List.fold_left _Plus _Zero
+  | Par    -> List.fold_left _Par  _Bot
+  | With   -> List.fold_left _With _Top
+  | Bang   -> mk_un _Bang
+  | Qm     -> mk_un _Qm
+  | All x  -> mk_un (_All x)
+  | Ex x   -> mk_un (_Ex x)
+  | Mark m -> mk_un (_Mark m)
   end
 
 type sub =
@@ -212,7 +204,7 @@ and sub_form ss f =
       let t1 = sub_term ss t1 in
       let t2 = sub_term ss t2 in
       if t1 = t2 then
-        if s = ASSERT then conn One [] else conn Bot []
+        if s = ASSERT then _One else _Bot
       else atom s p [t1 ; t2]
   | Atom (s, p, ts) ->
       atom s p (List.map (sub_term ss) ts)
@@ -293,7 +285,7 @@ let rec unsubst f k =
 let unsubst f = unsubst f (fun fcx f -> (fcx, f))
 
 let unframe fr f =
-  fconn fr.fconn (fr.fleft @ (f :: fr.fright))
+  fconn fr.fconn (List.rev_append fr.fleft (f :: fr.fright))
 
 let head1 f =
   match f with

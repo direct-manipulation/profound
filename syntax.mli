@@ -28,7 +28,7 @@ and frame = {
 }
 
 and conn =
-  | Tens | One | Plus | Zero | Par | Bot | With | Top
+  | Tens | Plus | Par | With
   | All of Idt.t | Ex of Idt.t
   | Bang | Qm
   | Mark of mkind
@@ -62,6 +62,19 @@ val free_fcx : int -> fcx -> form -> bool
 
 val fcx_vars : fcx -> Idt.t list
 
-val atom : sign -> Idt.t -> term list -> form
-val conn : conn -> form list -> form
+val atom  : sign -> Idt.t -> term list -> form
+val conn  : conn -> form list -> form
 val subst : fcx -> form -> form
+
+val _Tens : form -> form -> form
+val _One  : form
+val _Plus : form -> form -> form
+val _Zero : form
+val _Par  : form -> form -> form
+val _Bot  : form
+val _With : form -> form -> form
+val _Top  : form
+val _All  : Idt.t -> form -> form
+val _Ex   : Idt.t -> form -> form
+val _Bang : form -> form
+val _Qm   : form -> form
