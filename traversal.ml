@@ -111,3 +111,110 @@ let rec cleanup f =
       conn c fs
   | Subst _ -> assert false
   end
+
+let rec find_marked f =
+  begin match f with
+  | Atom _ -> None
+  | Subst _ -> assert false
+  | Conn (Mark _, _) -> Some (Deque.empty, f)
+  | Conn (c, fs) ->
+      begin match find_marked_arg [] fs with
+      | Some (lfs, fcx, f, rfs) ->
+          let fr = {
+            fconn = fconn_of_conn c ;
+            fleft = lfs ;
+            fright = rfs ;
+          } in
+          let fcx = Deque.cons fr fcx in
+          Some (fcx, f)
+      | None -> None
+      end
+  end
+
+and find_marked_arg lfs rfs =
+  begin match rfs with
+  | [] -> None
+  | f :: rfs ->
+      begin match find_marked f with
+      | Some (fcx, f) ->
+          Some (lfs, fcx, f, rfs)
+      | None ->
+          find_marked_arg (f :: lfs) rfs
+      end
+  end
+
+let find_frame_mate fr0 fcx1 f1 =
+  let rec scan_left lfs rfs =
+    begin match lfs with
+    | [] -> finished `Left
+    | lf :: lfs ->
+        begin match find_marked lf with
+        | Some (fcx2, f2) ->
+            Some (lfs, fcx2, f2, rfs, fcx1, f1, fr0.fright)
+        | None ->
+            scan_left lfs (lf :: rfs)
+        end
+    end
+  and scan_right lfs rfs =
+    begin match rfs with
+    | [] -> finished `Right
+    | rf :: rfs ->
+        begin match find_marked rf with
+        | Some (fcx2, f2) ->
+            Some (fr0.fleft, fcx1, f1, lfs, fcx2, f2, rfs)
+        | None ->
+            scan_right (rf :: lfs) rfs
+        end
+    end
+  and finished = function
+    | `Left -> scan_right [] fr0.fright
+    | `Right -> None
+  in
+  scan_left fr0.fleft []
+
+let rec find_fcx_mate fcx0 fcx1 f1 =
+  begin match Deque.rear fcx0 with
+  | Some (fcx0, fr0) ->
+      begin match find_frame_mate fr0 fcx1 f1 with
+      | Some (lfs, fcx1, f1, mfs, fcx2, f2, rfs) ->
+          let fr0 = { fr0 with
+            fleft = lfs ;
+            fright = List.rev_append mfs rfs ;
+          } in
+          let fcx0 = Deque.snoc fcx0 fr0 in
+          Some (fcx0, fcx1, f1, fcx2, f2)
+      | None ->
+          let fcx1 = Deque.cons fr0 fcx1 in
+          find_fcx_mate fcx0 fcx1 f1
+      end
+  | None -> None
+  end
+
+type link_matching_error =
+  | First_mark_not_found
+  | Second_mark_not_found
+  | Invalid_marks
+  | Bad_ancestor
+exception Link_matching of link_matching_error
+let linkfail err = raise (Link_matching err)
+
+let match_links f : fcx * fcx * form * fcx * form =
+  begin match find_marked f with
+  | Some (fcx0, f1) ->
+      begin match find_fcx_mate fcx0 Deque.empty f1 with
+      | Some (fcx0, fcx1, f1, fcx2, f2 as res) ->
+          begin match Deque.rear fcx0 with
+          | Some (_, {fconn = PAR ; _}) -> ()
+          | _ -> linkfail Bad_ancestor
+          end ;
+          begin match f1, f2 with
+          | Conn (Mark SRC, _), Conn (Mark SNK, _)
+          | Conn (Mark SNK, _), Conn (Mark SRC, _) -> ()
+          | _ -> linkfail Invalid_marks
+          end ;
+          res
+      | None -> linkfail Second_mark_not_found
+      end
+  | None ->
+      linkfail First_mark_not_found
+  end

@@ -107,27 +107,6 @@ let find_lnk f =
 let has_lnk f =
   try ignore (find_lnk f) ; true with Not_found -> false
 
-let is_mpar f =
-  begin match f with
-  | Conn (Par, [f ; g]) ->
-      has_lnk f && has_lnk g
-  | _ -> false
-  end
-
-let find_mpar f =
-  let f = try find_form is_mpar f with Not_found -> rulefail Not_par in
-  let (fcx, f) = unsubst f in
-  begin match f with
-  | Conn (Par, [f ; g]) -> (fcx, f, g)
-  | _ -> assert false
-  end
-
-let link_normal_form f =
-  let (fcx0, f1, f2) = find_mpar f in
-  let (fcx1, f1) = find_lnk f1 in
-  let (fcx2, f2) = find_lnk f2 in
-  (fcx0, fcx1, f1, fcx2, f2)
-
 let make_lnk dir f =
   let (fcx, f) = unsubst f in
   if has_lnk f then rulefail Already_marked ;
@@ -253,17 +232,8 @@ let rec resolve_mpar_ fcx1 f1 fcx2 f2 =
   end
 
 let resolve_mpar f =
-  let (fcx0, fcx1, f1, fcx2, f2) = link_normal_form (go_top f) in
-  let (fcx1, f1) = unsubst f1 in
-      (* let (fcx1, f1) = reduce_choices fcx1 f1 in *)
-  let (fcx2, f2) = unsubst f2 in
-      (* let (fcx2, f2) = reduce_choices fcx2 f2 in *)
+  let (fcx0, fcx1, f1, fcx2, f2) = Traversal.match_links (go_top f) in
+  (* let (fcx1, f1) = reduce_choices fcx1 f1 in *)
+  (* let (fcx2, f2) = reduce_choices fcx2 f2 in *)
   let f0 = resolve_mpar_ fcx1 f1 fcx2 f2 in
   go_top (subst fcx0 f0)
-
-let rule_int tr1 tr2 f =
-  let f = make_lnk SRC (descend tr1 f) in
-  let f = go_top f in
-  let f = make_lnk SNK (descend tr2 f) in
-  let f = go_top f in
-  f
