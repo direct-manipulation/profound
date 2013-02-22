@@ -27,7 +27,7 @@ let go_down n f =
   let (fcx, f) = unsubst f in
   let (fr, f) =
     begin match f with
-    | Conn ((Mpar | Mark _), _)
+    | Conn (Mark _, _)
     | Atom _ ->
         travfail At_leaf
     | Conn (c, fs) ->
@@ -106,8 +106,6 @@ let rec cleanup f =
   | Atom _ as f -> f
   | Conn (Mark _, [f]) ->
       cleanup f
-  | Conn (Mpar, [f ; g]) ->
-      conn Par [cleanup f ; cleanup g]
   | Conn (c, fs) ->
       let fs = List.map cleanup fs in
       conn c fs

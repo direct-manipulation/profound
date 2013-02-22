@@ -31,7 +31,7 @@ and conn =
   | Tens | One | Plus | Zero | Par | Bot | With | Top
   | All of Idt.t | Ex of Idt.t
   | Bang | Qm
-  | Mpar | Mark of mkind
+  | Mark of mkind
 
 and fconn =
   | TENS | PLUS | PAR | WITH

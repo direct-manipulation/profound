@@ -141,7 +141,7 @@ and extend cx fcx =
 
 and needs_bracket p f =
   begin match head1 f with
-  | Conn ((Mpar | Mark _), _)
+  | Conn (Mark _, _)
   | Atom _ -> false
   | Conn (q, _) ->
       not (p = q || (is_un p && is_un q) || prec p < prec q)
@@ -174,7 +174,6 @@ and bin_string = function
   | Plus -> " \\PLUS "
   | Par  -> " \\PAR "
   | With -> " \\WITH "
-  | Mpar -> " \\MPAR "
   | _ -> assert false
 
 and add_un buf = function
@@ -198,7 +197,6 @@ and kon_string = function
   | _ -> assert false
 
 and prec = function
-  | Mpar -> 1 (* 0 *)
   | Par -> 1
   | Plus -> 1 (* 2 *)
   | With -> 1 (* 3 *)

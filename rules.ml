@@ -88,7 +88,7 @@ let find_form pred f0 =
     let (fcx, f) = unsubst f0 in
     if pred f then raise (Found f0) else
       begin match f with
-      | Conn ((Mpar | Mark _ ), _)
+      | Conn (Mark _, _)
       | Atom _ -> ()
       | Conn (_, fs) ->
           for i = 0 to List.length fs - 1 do
@@ -123,10 +123,10 @@ let find_mpar f =
   end
 
 let link_normal_form f =
-  let (fcx0, f, g) = find_mpar f in
-  let (fcx1, f) = find_lnk f in
-  let (fcx2, g) = find_lnk g in
-  subst fcx0 (conn Mpar [subst fcx1 f ; subst fcx2 g])
+  let (fcx0, f1, f2) = find_mpar f in
+  let (fcx1, f1) = find_lnk f1 in
+  let (fcx2, f2) = find_lnk f2 in
+  (fcx0, fcx1, f1, fcx2, f2)
 
 let make_lnk dir f =
   let (fcx, f) = unsubst f in
@@ -146,7 +146,7 @@ let is_src f =
   | _ -> assert false
   end
 
-let rec resolve_mpar fcx1 f1 fcx2 f2 =
+let rec resolve_mpar_ fcx1 f1 fcx2 f2 =
   begin match Deque.front fcx1, Deque.front fcx2 with
   | None, None ->
       let f1 = unlnk f1 in
@@ -160,13 +160,13 @@ let rec resolve_mpar fcx1 f1 fcx2 f2 =
       end
   (* negative cases *)
   | Some ({fconn = PAR ; _} as fr, fcx1), _ ->
-      let f0 = resolve_mpar fcx1 f1 fcx2 f2 in
+      let f0 = resolve_mpar_ fcx1 f1 fcx2 f2 in
       unframe fr f0
   | _, Some ({fconn = PAR ; _} as fr, fcx2) ->
-      let f0 = resolve_mpar fcx1 f1 fcx2 f2 in
+      let f0 = resolve_mpar_ fcx1 f1 fcx2 f2 in
       unframe fr f0
   | Some ({fconn = WITH ; _} as fr, fcx1), _ ->
-      let f0 = resolve_mpar fcx1 f1 fcx2 f2 in
+      let f0 = resolve_mpar_ fcx1 f1 fcx2 f2 in
       let u2 = go_top (subst fcx2 (unlnk f2)) in
       let dist f = conn Par [f ; u2] in
       let fr = { fr with
@@ -175,7 +175,7 @@ let rec resolve_mpar fcx1 f1 fcx2 f2 =
       } in
       unframe fr f0
   | _, Some ({fconn = WITH ; _} as fr, fcx2) ->
-      let f0 = resolve_mpar fcx1 f1 fcx2 f2 in
+      let f0 = resolve_mpar_ fcx1 f1 fcx2 f2 in
       let u1 = go_top (subst fcx1 (unlnk f1)) in
       let dist f = conn Par [u1 ; f] in
       let fr = { fr with
@@ -187,63 +187,63 @@ let rec resolve_mpar fcx1 f1 fcx2 f2 =
       let fr = { fr with fconn = ALL (salt x) } in
       let (fcx2, ss) = sub_fcx (Shift 1) fcx2 in
       let f2 = sub_form ss f2 in
-      let f0 = resolve_mpar fcx1 f1 fcx2 f2 in
+      let f0 = resolve_mpar_ fcx1 f1 fcx2 f2 in
       unframe fr f0
   | _, Some ({fconn = ALL x ; _} as fr, fcx2) ->
       let fr = { fr with fconn = ALL (salt x) } in
       let (fcx1, ss) = sub_fcx (Shift 1) fcx1 in
       let f1 = sub_form ss f1 in
-      let f0 = resolve_mpar fcx1 f1 fcx2 f2 in
+      let f0 = resolve_mpar_ fcx1 f1 fcx2 f2 in
       unframe fr f0
   | Some ({fconn = QM ; _}, fcx1), _ when bang_free fcx2 ->
-      resolve_mpar fcx1 f1 fcx2 f2
+      resolve_mpar_ fcx1 f1 fcx2 f2
   | _, Some ({fconn = QM ; _}, fcx2) when bang_free fcx1 ->
-      resolve_mpar fcx1 f1 fcx2 f2
+      resolve_mpar_ fcx1 f1 fcx2 f2
   (* positive cases *)
   | Some ({fconn = TENS ; _} as fr, fcx1), _ ->
-      let f0 = resolve_mpar fcx1 f1 fcx2 f2 in
+      let f0 = resolve_mpar_ fcx1 f1 fcx2 f2 in
       unframe fr f0
   | _, Some ({fconn = TENS ; _} as fr, fcx2) ->
-      let f0 = resolve_mpar fcx1 f1 fcx2 f2 in
+      let f0 = resolve_mpar_ fcx1 f1 fcx2 f2 in
       unframe fr f0
   | Some ({fconn = PLUS ; _}, fcx1), _ ->
-      resolve_mpar fcx1 f1 fcx2 f2
+      resolve_mpar_ fcx1 f1 fcx2 f2
   | _, Some ({fconn = PLUS ; _}, fcx2) ->
-      resolve_mpar fcx1 f1 fcx2 f2
+      resolve_mpar_ fcx1 f1 fcx2 f2
   | Some ({fconn = EX x1 ; _} as fr1, fcx1d),
     Some ({fconn = EX x2 ; _} as fr2, fcx2d) ->
       if is_src f1 then begin
         let fr2 = { fr2 with fconn = EX (salt x2) } in
         let (fcx1, ss) = sub_fcx (Shift 1) fcx1 in
         let f1 = sub_form ss f1 in
-        let f0 = resolve_mpar fcx1 f1 fcx2d f2 in
+        let f0 = resolve_mpar_ fcx1 f1 fcx2d f2 in
         unframe fr2 f0
       end else begin
         let fr1 = { fr1 with fconn = EX (salt x1) } in
         let (fcx2, ss) = sub_fcx (Shift 1) fcx2 in
         let f2 = sub_form ss f2 in
-        let f0 = resolve_mpar fcx1d f1 fcx2 f2 in
+        let f0 = resolve_mpar_ fcx1d f1 fcx2 f2 in
         unframe fr1 f0
       end
   | Some ({fconn = EX x ; _} as fr, fcx1), _ ->
       let fr = { fr with fconn = EX (salt x) } in
       let (fcx2, ss) = sub_fcx (Shift 1) fcx2 in
       let f2 = sub_form ss f2 in
-      let f0 = resolve_mpar fcx1 f1 fcx2 f2 in
+      let f0 = resolve_mpar_ fcx1 f1 fcx2 f2 in
       unframe fr f0
   | _, Some ({fconn = EX x ; _} as fr, fcx2) ->
       let fr = { fr with fconn = EX (salt x) } in
       let (fcx1, ss) = sub_fcx (Shift 1) fcx1 in
       let f1 = sub_form ss f1 in
-      let f0 = resolve_mpar fcx1 f1 fcx2 f2 in
+      let f0 = resolve_mpar_ fcx1 f1 fcx2 f2 in
       unframe fr f0
   | Some ({fconn = BANG ; _} as fr, fcx1), _ ->
       if not (is_qm fcx2 f2) then rulefail Promotion ;
-      let f0 = resolve_mpar fcx1 f1 fcx2 f2 in
+      let f0 = resolve_mpar_ fcx1 f1 fcx2 f2 in
       unframe fr f0
   | _, Some ({fconn = BANG ; _} as fr, fcx2) ->
       if not (is_qm fcx1 f1) then rulefail Promotion ;
-      let f0 = resolve_mpar fcx1 f1 fcx2 f2 in
+      let f0 = resolve_mpar_ fcx1 f1 fcx2 f2 in
       unframe fr f0
   (* The following are supposedly unreachable states *)
   (* They are just present to silence the exhaustiveness checker *)
@@ -251,21 +251,15 @@ let rec resolve_mpar fcx1 f1 fcx2 f2 =
   | _, Some ({fconn = QM ; _}, _) ->
       rulefail Stuck
   end
-let resolve_mpar_internal = resolve_mpar
 
 let resolve_mpar f =
-  let f = link_normal_form (go_top f) in
-  let (fcx, f) = unsubst f in
-  begin match f with
-  | Conn (Mpar, [f1 ; f2]) ->
-      let (fcx1, f1) = unsubst f1 in
+  let (fcx0, fcx1, f1, fcx2, f2) = link_normal_form (go_top f) in
+  let (fcx1, f1) = unsubst f1 in
       (* let (fcx1, f1) = reduce_choices fcx1 f1 in *)
-      let (fcx2, f2) = unsubst f2 in
+  let (fcx2, f2) = unsubst f2 in
       (* let (fcx2, f2) = reduce_choices fcx2 f2 in *)
-      let f0 = resolve_mpar fcx1 f1 fcx2 f2 in
-      go_top (subst fcx f0)
-  | _ -> assert false
-  end
+  let f0 = resolve_mpar_ fcx1 f1 fcx2 f2 in
+  go_top (subst fcx0 f0)
 
 let rule_int tr1 tr2 f =
   let f = make_lnk SRC (descend tr1 f) in

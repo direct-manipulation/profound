@@ -33,7 +33,6 @@ and conn =
   | Tens | One | Plus | Zero | Par | Bot | With | Top
   | All of idt | Ex of idt
   | Bang | Qm
-  | Mpar
   | Mark of mkind
 
 and fconn = 
@@ -169,12 +168,6 @@ let mk_quant q fs =
   | _ -> assert false
   end
 
-let mk_mpar fs =
-  begin match fs with
-  | [_ ; _] -> Conn (Mpar, fs)
-  | _ -> assert false
-  end
-
 let mk_mark m fs =
   begin match fs with
   | [_] -> Conn (m, fs)
@@ -191,7 +184,6 @@ let conn c =
   | Qm     -> mk_qm
   | All _
   | Ex _   -> mk_quant c
-  | Mpar   -> mk_mpar
   | Mark _ -> mk_mark c
   | One | Zero | Bot | Top ->
       mk_kon c
