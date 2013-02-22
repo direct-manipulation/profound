@@ -13,98 +13,20 @@ open Rules
 
 open Idt
 
-let idx n = Idx n
-let app f ts = App (intern f, ts)
+let read_form f =
+  let txt = String.trim (input_file f) in
+  Syntax_prs.(match parse_form txt with
+  | Prs.Read f -> f
+  | Prs.Fail _ ->
+      Log.(log FATAL "Could not read a form from %S" f) ;
+      failwith "read_form")
 
-let negate_sign = function
-  | ASSERT -> REFUTE
-  | REFUTE -> ASSERT
-
-let dual_conn = function
-  | Tens -> Par | One -> Bot
-  | Plus -> With | Zero -> Top
-  | Par -> Tens | Bot -> One
-  | With -> Plus | Top -> Zero
-  | All x -> Ex x | Ex x -> All x
-  | Bang -> Qm | Qm -> Bang
-  | Mpar | Mark _ -> invalid_arg "dual: found MPAR or MARK"
-
-let rec dual f =
-  begin match f with
-  | Conn (c, fs) ->
-      conn (dual_conn c) (List.map dual fs)
-  | Atom (s, p, ts) ->
-      atom (negate_sign s) p ts
-  | Subst (fcx, f) ->
-      subst (dual_fcx fcx) (dual f)
-  end
-
-and dual_fcx fcx =
-  Deque.map dual_frame fcx
-
-and dual_frame fr = {
-  fconn = fconn_of_conn (dual_conn (conn_of_fconn fr.fconn)) ;
-  fleft = List.map dual fr.fleft ;
-  fright = List.map dual fr.fright ;
-}
-
-let tens     = conn Tens
-let one      = conn One []
-let plus     = conn Plus
-let zero     = conn Zero []
-let par      = conn Par
-let bot      = conn Bot []
-let wth      = conn With
-let top      = conn Top []
-let all x f  = conn (All (intern x)) [f]
-let ex x f   = conn (Ex (intern x)) [f]
-let bang f   = conn Bang [f]
-let qm f     = conn Qm [f]
-let mpar f g = conn Mpar [f; g]
-
-let natm p ts = atom REFUTE (intern p) ts
-let atom p ts = atom ASSERT (intern p) ts
-
-let a  = atom "a" []
-let a' = natm "a" []
-let b  = atom "b" []
-let b' = natm "b" []
-let c  = atom "c" []
-let c' = natm "c" []
-let d  = atom "d" []
-let d' = natm "d" []
-
-let forms = ref []
-let push f = forms := f :: !forms ; f
-let push_ f = f
-let ( |> ) x f = f x
-
-  (*
-    let f0 = par [qm a' ; bang (bang a)] |> push
-    let i0 = rule_int [0 ; 0] [1; 0 ; 0] f0 |> push
-    let r0 = go_top (resolve_mpar i0) |> push
-  *)
-
-
-let f0 = par [tens [a ; b] ;
-              par [wth [a' ; b'] ;
-                   plus [a' ; b']]] |> push
-let _ = descend [0 ; 0] f0 |> push_
-let f0 = rule_int [0 ; 0] [1 ; 0 ; 0] f0 |> push
-let f0 = resolve_mpar f0 |> push
-let f0 = rule_int [0 ; 1 ; 1]  [0 ; 1 ; 0 ; 1] f0 |> push
-let f0 = resolve_mpar f0 |> push
-let f0 = rule_int [0 ; 0] [1 ; 1] f0 |> push
-let f0 = resolve_mpar f0 |> push
-let f0 = rule_int [1 ; 0] [1 ; 1 ; 0] f0 |> push
-let f0 = resolve_mpar f0 |> push
-
-let f0 = par [ex "x" (all "y" (plus [natm "p" [idx 1] ;
-                                     atom "p" [idx 0]])) ;
-              ex "x" (all "y" (ex "z" (plus [natm "p" [idx 2] ;
-                                     atom "p" [idx 1]])))] |> push_
-let f0 = rule_int [0 ; 0 ; 0 ; 0] [1 ; 0 ; 0 ; 0 ; 1] f0 |> push_
-let r0 = resolve_mpar f0 |> push_
-
-let _ = Syntax_tex.wash_forms !forms
+let f0 = read_form "examples/cls-2.p"
+let f1 = go_top (make_lnk SRC (descend [0 ; 0] f0))
+let f2 = go_top (make_lnk SNK (descend [1 ; 0] f1))
+let (fcx0, fcx1, l1, fcx2, l2) = match_links f2
+let f3 = cleanup (subst fcx0 (_Par (subst fcx1 l1) (subst fcx2 l2)))
+let f4 = resolve_mpar_ fcx1 l1 fcx2 l2
+let f5 = cleanup (subst fcx0 f4)
+let f6 = resolve_mpar f2
 
