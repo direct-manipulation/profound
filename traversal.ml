@@ -146,7 +146,7 @@ and find_marked_arg lfs rfs =
 let find_frame_mate fr0 fcx1 f1 =
   let rec scan_left lfs rfs =
     begin match lfs with
-    | [] -> finished `Left
+    | [] -> None
     | lf :: lfs ->
         begin match find_marked lf with
         | Some (fcx2, f2) ->
@@ -157,7 +157,7 @@ let find_frame_mate fr0 fcx1 f1 =
     end
   and scan_right lfs rfs =
     begin match rfs with
-    | [] -> finished `Right
+    | [] -> None
     | rf :: rfs ->
         begin match find_marked rf with
         | Some (fcx2, f2) ->
@@ -166,11 +166,11 @@ let find_frame_mate fr0 fcx1 f1 =
             scan_right (rf :: lfs) rfs
         end
     end
-  and finished = function
-    | `Left -> scan_right [] fr0.fright
-    | `Right -> None
   in
-  scan_left fr0.fleft []
+  begin match scan_left fr0.fleft [] with
+  | None -> scan_right [] fr0.fright
+  | res -> res
+  end
 
 let rec find_fcx_mate fcx0 fcx1 f1 =
   begin match Deque.rear fcx0 with
