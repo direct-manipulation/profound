@@ -21,7 +21,7 @@ type form =
   | Conn  of conn * form list
   | Subst of fcx * form
 
-and fcx = frame Deque.t
+and fcx = frame Cx.t
 
 and frame = {
   fconn  : fconn ;
@@ -65,7 +65,7 @@ and test_form_ dep test f =
   end
 
 and test_fcx_ dep test fcx f =
-  begin match Deque.front fcx with
+  begin match Cx.front fcx with
   | None -> test_form_ dep test f
   | Some ({fconn = (EX _ | ALL _) ; _}, fcx) ->
       test_fcx_ (dep + 1) test fcx f
@@ -84,9 +84,9 @@ let atom s p ts = Atom (s, p, ts)
 let subst fcx f =
   begin match f with
   | Subst (fcx1, f) ->
-      Subst (Deque.append fcx fcx1, f)
+      Subst (Cx.append fcx fcx1, f)
   | _ ->
-      if Deque.is_empty fcx then f
+      if Cx.is_empty fcx then f
       else Subst (fcx, f)
   end
 
@@ -245,19 +245,19 @@ and requantify q f =
   Conn (q, [f])
 
 and sub_fcx ss fcx =
-  begin match Deque.front fcx with
+  begin match Cx.front fcx with
   | Some ({ fconn = (ALL _ | EX _) ; _ } as fr, fcx) ->
       let (fcx, ss) = sub_fcx (bump ss) fcx in
-      (Deque.cons fr fcx, ss)
+      (Cx.cons fr fcx, ss)
   | Some (fr, fcx) ->
       let fr = { fr with
         fleft = List.map (sub_form ss) fr.fleft ;
         fright = List.map (sub_form ss) fr.fright ;
       } in
       let (fcx, ss) = sub_fcx ss fcx in
-      (Deque.cons fr fcx, ss)
+      (Cx.cons fr fcx, ss)
   | None ->
-      (Deque.empty, ss)
+      (Cx.empty, ss)
   end
 
 and bump ss = Dot (seq (Shift 1) ss, Idx 0)
@@ -274,7 +274,7 @@ and seq ss tt =
   end
 
 let rec fcx_vars fcx =
-  begin match Deque.rear fcx with
+  begin match Cx.rear fcx with
   | Some (fcx, {fconn = (EX x | ALL x) ; _}) ->
       x :: fcx_vars fcx
   | Some (fcx, _) ->
@@ -298,12 +298,12 @@ let conn_of_fconn = function
 
 let fconn fc = conn (conn_of_fconn fc)
 
-let subst1 fr f = subst (Deque.of_list [fr]) f
+let subst1 fr f = subst (Cx.of_list [fr]) f
 
 let rec unsubst f =
   begin match f with
   | Subst (fcx, f) -> (fcx, f)
-  | _ -> (Deque.empty, f)
+  | _ -> (Cx.empty, f)
   end
 
 let unframe fr f =
@@ -312,7 +312,7 @@ let unframe fr f =
 let head1 f =
   match f with
   | Subst (fcx, f) ->
-      begin match Deque.front fcx with
+      begin match Cx.front fcx with
       | Some (fr, fcx) -> unframe fr (subst fcx f)
       | None -> assert false
       end

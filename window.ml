@@ -60,7 +60,7 @@ let redisplay () =
 
 let rewrite_cur ?(log = false) ?mmode f =
   if log then gui.hist <- (gui.cur, gui.mmode) :: gui.hist ;
-  gui.cur <- subst Deque.empty f ;
+  gui.cur <- subst Cx.empty f ;
   (match mmode with Some mmode -> gui.mmode <- mmode | None -> ()) ;
   redisplay ()
 
@@ -146,7 +146,7 @@ let key_delete _ =
       | Conn (Qm, _) ->
           rewrite_cur ~log:true (subst fcx (conn Par []))
       | _ -> 
-          begin match Deque.rear fcx with
+          begin match Cx.rear fcx with
           | Some (fcx, ({fconn = PLUS ; _} as fr)) ->
               let f = conn Plus (fr.fleft @ fr.fright) in
               rewrite_cur ~log:true (subst fcx f)

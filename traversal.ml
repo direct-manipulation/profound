@@ -40,12 +40,12 @@ let go_down n f =
         (fr, f)
     | Subst _ -> assert false
     end in
-  let fcx = Deque.snoc fcx fr in
+  let fcx = Cx.snoc fcx fr in
   subst fcx f
 
 let go_up f =
   let (fcx, f) = unsubst f in
-  begin match Deque.rear fcx with
+  begin match Cx.rear fcx with
   | Some (fcx, fr) ->
       subst fcx (unframe fr f)
   | None -> travfail At_top
@@ -59,7 +59,7 @@ let rec go_top f =
 
 let go_left f =
   let (fcx, f) = unsubst f in
-  begin match Deque.rear fcx with
+  begin match Cx.rear fcx with
   | Some (fcx, fr) ->
       begin match fr.fleft with
       | lf :: lfs ->
@@ -67,7 +67,7 @@ let go_left f =
             fleft = lfs ;
             fright = f :: fr.fright ;
           } in
-          let fcx = Deque.snoc fcx fr in
+          let fcx = Cx.snoc fcx fr in
           subst fcx lf
       | [] -> travfail At_edge
       end
@@ -76,7 +76,7 @@ let go_left f =
 
 let go_right f =
   let (fcx, f) = unsubst f in
-  begin match Deque.rear fcx with
+  begin match Cx.rear fcx with
   | Some (fcx, fr) ->
       begin match fr.fright with
       | rf :: rfs ->
@@ -84,7 +84,7 @@ let go_right f =
             fright = rfs ;
             fleft = f :: fr.fleft ;
           } in
-          let fcx = Deque.snoc fcx fr in
+          let fcx = Cx.snoc fcx fr in
           subst fcx rf
       | [] -> travfail At_edge
       end
@@ -116,7 +116,7 @@ let rec find_marked f =
   begin match f with
   | Atom _ -> None
   | Subst _ -> assert false
-  | Conn (Mark _, _) -> Some (Deque.empty, f)
+  | Conn (Mark _, _) -> Some (Cx.empty, f)
   | Conn (c, fs) ->
       begin match find_marked_arg [] fs with
       | Some (lfs, fcx, f, rfs) ->
@@ -125,7 +125,7 @@ let rec find_marked f =
             fleft = lfs ;
             fright = rfs ;
           } in
-          let fcx = Deque.cons fr fcx in
+          let fcx = Cx.cons fr fcx in
           Some (fcx, f)
       | None -> None
       end
@@ -173,7 +173,7 @@ let find_frame_mate fr0 fcx1 f1 =
   end
 
 let rec find_fcx_mate fcx0 fcx1 f1 =
-  begin match Deque.rear fcx0 with
+  begin match Cx.rear fcx0 with
   | Some (fcx0, fr0) ->
       begin match find_frame_mate fr0 fcx1 f1 with
       | Some (lfs, fcx1, f1, mfs, fcx2, f2, rfs) ->
@@ -181,10 +181,10 @@ let rec find_fcx_mate fcx0 fcx1 f1 =
             fleft = lfs ;
             fright = List.rev_append mfs rfs ;
           } in
-          let fcx0 = Deque.snoc fcx0 fr0 in
+          let fcx0 = Cx.snoc fcx0 fr0 in
           Some (fcx0, fcx1, f1, fcx2, f2)
       | None ->
-          let fcx1 = Deque.cons fr0 fcx1 in
+          let fcx1 = Cx.cons fr0 fcx1 in
           find_fcx_mate fcx0 fcx1 f1
       end
   | None -> None
@@ -201,9 +201,9 @@ let linkfail err = raise (Link_matching err)
 let match_links f : fcx * fcx * form * fcx * form =
   begin match find_marked f with
   | Some (fcx0, f1) ->
-      begin match find_fcx_mate fcx0 Deque.empty f1 with
+      begin match find_fcx_mate fcx0 Cx.empty f1 with
       | Some (fcx0, fcx1, f1, fcx2, f2 as res) ->
-          begin match Deque.rear fcx0 with
+          begin match Cx.rear fcx0 with
           | Some (_, {fconn = PAR ; _}) -> ()
           | _ -> linkfail Bad_ancestor
           end ;

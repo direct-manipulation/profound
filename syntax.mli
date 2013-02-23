@@ -19,7 +19,7 @@ type form = private
   | Conn of conn * form list
   | Subst of fcx * form
 
-and fcx = frame Deque.t
+and fcx = frame Cx.t
 
 and frame = {
   fconn : fconn;

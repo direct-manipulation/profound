@@ -22,7 +22,7 @@ exception Rule_failure of rule_error
 let rulefail err = raise (Rule_failure err)
 
 let is_qm fcx f =
-  begin match Deque.front fcx with
+  begin match Cx.front fcx with
   | Some ({fconn = QM ; _}, _) -> true
   | Some _ -> false
   | None ->
@@ -33,7 +33,7 @@ let is_qm fcx f =
   end
 
 let rec bang_free fcx =
-  begin match Deque.front fcx with
+  begin match Cx.front fcx with
   | None -> true
   | Some ({fconn = BANG ; _}, _) -> false
   | Some (_, fcx) -> bang_free fcx
@@ -123,7 +123,7 @@ let maybe_refresh fr fcx f =
   else fr
 
 let rec resolve_mpar_ fcx1 f1 fcx2 f2 =
-  begin match Deque.front fcx1, Deque.front fcx2 with
+  begin match Cx.front fcx1, Cx.front fcx2 with
   | None, None ->
       let f1 = unlnk f1 in
       let f2 = unlnk f2 in
