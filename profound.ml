@@ -83,7 +83,8 @@ let main () =
         exit 1
     end in
   Window.startup frm ;
-  Log.(log INFO "Done")
+  Log.(log INFO "Done") ;
+  Log.reset ()
 
 let () =
   if !Sys.interactive then

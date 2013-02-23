@@ -6,10 +6,6 @@
 
 open Batteries
 
-type logdest =
-  | Ether
-  | Channel of unit BatIO.output
-
 type loglevel =
   | FATAL | ERROR | WARN | INFO | DEBUG | TRACE
 
@@ -23,18 +19,16 @@ let lev_string = function
 
 let loglevel = ref WARN
 let logging = ref false
-let logdest = ref Ether
+let logdest = ref stdout
 
 let log ?force lev fmt =
   let ouch =
     begin match force with
     | Some ch -> Some ch
     | None ->
-        begin match !logdest with
-        | Channel ouch when lev <= !loglevel && !logging ->
-            Some ouch
-        | _ -> None
-        end
+        if !logging && lev <= !loglevel
+        then Some !logdest
+        else None
     end in
   begin match ouch with
   | Some ch ->
@@ -44,24 +38,29 @@ let log ?force lev fmt =
       Printf.ifprintf () fmt
   end
 
+let file_channels : (string, unit BatIO.output) Map.t ref = ref Map.empty
+
 let reset () =
   loglevel := WARN ;
   logging := false ;
-  logdest := Ether
+  logdest := stdout ;
+  Map.iter (fun nm ch ->
+    log ~force:stdout TRACE "Closing %S" nm ;
+    close_out ch
+  ) !file_channels ;
+  file_channels := Map.empty
 
 let to_stdout () =
   logging := true ;
-  logdest := Channel stdout
-
-let file_channels : (string, unit BatIO.output) Map.t ref = ref Map.empty
+  logdest := stdout
 
 let to_file f =
   logging := true ;
   log ~force:stdout TRACE "Logging to %S" f ;
   if Map.mem f !file_channels then
-    logdest := Channel (Map.find f !file_channels)
+    logdest := Map.find f !file_channels
   else begin
     let ch = open_out_bin f in
     file_channels := Map.add f ch !file_channels ;
-    logdest := Channel ch
+    logdest := ch
   end
