@@ -6,9 +6,19 @@
 
 (** Interning strings *)
 
-type t = private string
+type idt = private {
+  src : string ;
+  tex : string ;
+  salt : int ;
+}
+type t = idt
 
 val clear : unit -> unit
 
-val intern : string -> t
-val rep    : t -> string
+val intern  : ?salt:int -> string -> t
+val refresh : t -> t
+
+val src_rep : t -> string
+val tex_rep : t -> string
+
+

@@ -11,57 +11,17 @@ open Printf
 open Syntax
 open Traversal
 
-let is_int s =
-  let rec scan = function
-    | 0 -> true
-    | n -> Char.is_digit s.[n] && scan (n - 1)
-  in
-  scan (String.length s - 1)
-
-let unsalt ?(rejoin = "_") xr = 
-  let comps = String.nsplit ~by:"_" xr in
-  begin match comps with
-  | [xr] -> (xr, None)
-  | _ ->
-      begin match List.split_at (List.length comps - 1) comps with
-      | (inits, [salt]) when is_int salt ->
-          (String.concat rejoin inits, Some salt)
-      | _ ->
-          (String.concat rejoin comps, None)
-      end
-  end
-
-let salt =
-  let last = ref 0 in
-  fun x ->
-    incr last ;
-    let (xr, _) = unsalt (Idt.rep x) in
-    Idt.intern (xr ^ "_" ^ string_of_int !last)
-
-let add_idt buf i = add_string buf (Idt.rep i)
-
-let add_var buf v =
-  let vr = Idt.rep v in
-  try begin
-    let (main, salt) = unsalt ~rejoin:"\\_" vr in
-    add_string buf main ;
-    match salt with
-    | None -> ()
-    | Some salt ->
-        add_string buf "_{" ;
-        add_string buf salt ;
-        add_string buf "}"
-  end with Not_found -> add_string buf vr
+let add_idt buf i = add_string buf (Idt.tex_rep i)
 
 let add_fun kon buf f =
   if kon then add_string buf "\\mathsf{" ;
-  add_var buf f ;
+  add_idt buf f ;
   if kon then add_string buf "}"
 
 let rec pp_term ?(kon = true) cx buf t =
   begin match t with
   | Idx n ->
-      add_var buf (List.nth cx n)
+      add_idt buf (List.nth cx n)
   | App (f, []) ->
       add_fun kon buf f
   | App (f, ts) ->
@@ -85,7 +45,7 @@ and pp_terms cx buf ts =
 let rec pp_form cx buf f =
   begin match f with
   | Atom (ASSERT, p, ts) ->
-      begin match Idt.rep p, ts with
+      begin match p.Idt.src, ts with
       | "=", [s ; t] ->
           pp_term cx buf s ;
           add_string buf " = " ;
@@ -93,7 +53,7 @@ let rec pp_form cx buf f =
       | _ -> pp_term ~kon:false cx buf (App (p, ts))
       end
   | Atom (REFUTE, p, ts) ->
-      begin match Idt.rep p, ts with
+      begin match p.Idt.src, ts with
       | "=", [s ; t] ->
           pp_term cx buf s ;
           add_string buf " \\neq " ;
@@ -182,11 +142,11 @@ and bin_string = function
 and add_un buf = function
   | All x ->
       add_string buf "\\ALL " ;
-      add_var buf x ;
+      add_idt buf x ;
       add_string buf ". "
   | Ex x ->
       add_string buf "\\EX " ;
-      add_var buf x ;
+      add_idt buf x ;
       add_string buf ". "
   | Bang -> add_string buf "\\BANG "
   | Qm -> add_string buf "\\QM "

@@ -43,35 +43,41 @@ and fconn =
 and mkind =
   | ARG | SRC | SNK
 
-let rec free_term x t =
+type test = dep:int -> term -> bool
+
+let rec test_term_ dep test t =
+  test ~dep t ||
   begin match t with
-  | Idx k -> x = k
-  | App (_, ts) ->
-      List.exists (free_term x) ts
+  | Idx _ -> false
+  | App (_, ts) -> List.exists (test_term_ dep test) ts
   end
 
-and free_form x f =
+and test_form_ dep test f =
   begin match f with
   | Atom (_, _, ts) ->
-      List.exists (free_term x) ts
+      List.exists (test_term_ dep test) ts
   | Conn ((Ex _ | All _), fs) ->
-      List.exists (free_form (x + 1)) fs
+      List.exists (test_form_ (dep + 1) test) fs
   | Conn (c, fs) ->
-      List.exists (free_form x) fs
+      List.exists (test_form_ dep test) fs
   | Subst (fcx, f) ->
-      free_fcx x fcx f
+      test_fcx_ dep test fcx f
   end
 
-and free_fcx x fcx f =
+and test_fcx_ dep test fcx f =
   begin match Deque.front fcx with
-  | None -> free_form x f
+  | None -> test_form_ dep test f
   | Some ({fconn = (EX _ | ALL _) ; _}, fcx) ->
-      free_fcx (x + 1) fcx f
+      test_fcx_ (dep + 1) test fcx f
   | Some (fr, fcx) ->
-      List.exists (free_form x) fr.fleft
-      || List.exists (free_form x) fr.fright
-      || free_fcx x fcx f
+      List.exists (test_form_ dep test) fr.fleft
+      || List.exists (test_form_ dep test) fr.fright
+      || test_fcx_ dep test fcx f
   end
+
+let test_term test t = test_term_ 0 test t
+let test_form test f = test_form_ 0 test f
+let test_fcx test fcx f = test_fcx_ 0 test fcx f
 
 let atom s p ts = Atom (s, p, ts)
 
@@ -83,6 +89,7 @@ let subst fcx f =
       if Deque.is_empty fcx then f
       else Subst (fcx, f)
   end
+
 
 let _One  = Conn (Tens, [])
 let _Zero = Conn (Plus, [])
@@ -151,6 +158,17 @@ let _Qm f =
       Conn (Qm, [f])
   end
 
+let fresh_for x f =
+  let test ~dep t =
+    begin match t with
+    | App (f, _) -> f = x
+    | _ -> false
+    end in
+  if test_form test f then
+    (Idt.refresh x, f)
+  else
+    (x, f)
+
 let _Q q f =
   begin match f with
   | Conn (Tens, []) -> _One
@@ -208,14 +226,23 @@ and sub_form ss f =
       else atom s p [t1 ; t2]
   | Atom (s, p, ts) ->
       atom s p (List.map (sub_term ss) ts)
-  | Conn ((All x | Ex x) as c, fs) ->
-      conn c (List.map (sub_form (bump ss)) fs)
+  | Conn ((All x | Ex x) as c, [f]) ->
+      requantify c (sub_form (bump ss) f)
+  | Conn ((All _ | Ex _), _) -> assert false
   | Conn (c, fs) ->
       conn c (List.map (sub_form ss) fs)
   | Subst (fcx, f) ->
       let (fcx, ss) = sub_fcx ss fcx in
       subst fcx (sub_form ss f)
   end
+
+and requantify q f =
+  let x = match q with (All x | Ex x) -> x | _ -> assert false in
+  let q =
+    if test_form (fun ~dep -> function App (f, _) -> f = x | _ -> false) f
+    then (match q with All x -> All (Idt.refresh x) | Ex x -> Ex (Idt.refresh x) | _ -> assert false)
+    else q in
+  Conn (q, [f])
 
 and sub_fcx ss fcx =
   begin match Deque.front fcx with

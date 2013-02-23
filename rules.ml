@@ -56,25 +56,6 @@ let rec equate ts1 ts2 =
       conn Par []
   end
 
-let rec reduce_choices fcx f =
-  begin match Deque.front fcx with
-  | None -> (fcx, f)
-  | Some ({fconn = PLUS ; _}, fcx) ->
-      reduce_choices fcx f
-  | Some ({fconn = (ALL _ | EX _) ; _} as fr, fcx) ->
-      let (fcx, f) = reduce_choices fcx f in
-      if free_fcx 0 fcx f then
-        (Deque.cons fr fcx, f)
-      else
-        let ss = Dot (Shift 0, Idx min_int) in
-        let (fcx, ss) = sub_fcx ss fcx in
-        let f = sub_form ss f in
-        (fcx, f)
-  | Some (fr, fcx) ->
-      let (fcx, f) = reduce_choices fcx f in
-      (Deque.cons fr fcx, f)
-  end
-
 let main_arg f =
   begin match f with
   | Subst (_, f) -> f
@@ -125,6 +106,22 @@ let is_src f =
   | _ -> assert false
   end
 
+let maybe_refresh fr fcx f =
+  let (x, rx) =
+    begin match fr.fconn with
+    | EX x -> (x, fun () -> EX (Idt.refresh x))
+    | ALL x -> (x, fun () -> ALL (Idt.refresh x))
+    | _ -> assert false
+    end in
+  let test ~dep t =
+    begin match t with
+    | Idx n -> dep = n
+    | App (f, _) -> f = x
+    end in
+  if test_fcx test fcx f
+  then { fr with fconn = rx () }
+  else fr
+
 let rec resolve_mpar_ fcx1 f1 fcx2 f2 =
   begin match Deque.front fcx1, Deque.front fcx2 with
   | None, None ->
@@ -163,13 +160,13 @@ let rec resolve_mpar_ fcx1 f1 fcx2 f2 =
       } in
       unframe fr f0
   | Some ({fconn = ALL x ; _} as fr, fcx1), _ ->
-      let fr = { fr with fconn = ALL (salt x) } in
+      let fr = maybe_refresh fr fcx2 f2 in
       let (fcx2, ss) = sub_fcx (Shift 1) fcx2 in
       let f2 = sub_form ss f2 in
       let f0 = resolve_mpar_ fcx1 f1 fcx2 f2 in
       unframe fr f0
   | _, Some ({fconn = ALL x ; _} as fr, fcx2) ->
-      let fr = { fr with fconn = ALL (salt x) } in
+      let fr = maybe_refresh fr fcx1 f1 in
       let (fcx1, ss) = sub_fcx (Shift 1) fcx1 in
       let f1 = sub_form ss f1 in
       let f0 = resolve_mpar_ fcx1 f1 fcx2 f2 in
@@ -192,26 +189,26 @@ let rec resolve_mpar_ fcx1 f1 fcx2 f2 =
   | Some ({fconn = EX x1 ; _} as fr1, fcx1d),
     Some ({fconn = EX x2 ; _} as fr2, fcx2d) ->
       if is_src f1 then begin
-        let fr2 = { fr2 with fconn = EX (salt x2) } in
+        let fr2 = maybe_refresh fr2 fcx1 f1 in
         let (fcx1, ss) = sub_fcx (Shift 1) fcx1 in
         let f1 = sub_form ss f1 in
         let f0 = resolve_mpar_ fcx1 f1 fcx2d f2 in
         unframe fr2 f0
       end else begin
-        let fr1 = { fr1 with fconn = EX (salt x1) } in
+        let fr1 = maybe_refresh fr1 fcx2 f2 in
         let (fcx2, ss) = sub_fcx (Shift 1) fcx2 in
         let f2 = sub_form ss f2 in
         let f0 = resolve_mpar_ fcx1d f1 fcx2 f2 in
         unframe fr1 f0
       end
   | Some ({fconn = EX x ; _} as fr, fcx1), _ ->
-      let fr = { fr with fconn = EX (salt x) } in
+      let fr = maybe_refresh fr fcx2 f2 in
       let (fcx2, ss) = sub_fcx (Shift 1) fcx2 in
       let f2 = sub_form ss f2 in
       let f0 = resolve_mpar_ fcx1 f1 fcx2 f2 in
       unframe fr f0
   | _, Some ({fconn = EX x ; _} as fr, fcx2) ->
-      let fr = { fr with fconn = EX (salt x) } in
+      let fr = maybe_refresh fr fcx1 f1 in
       let (fcx1, ss) = sub_fcx (Shift 1) fcx1 in
       let f1 = sub_form ss f1 in
       let f0 = resolve_mpar_ fcx1 f1 fcx2 f2 in
@@ -233,7 +230,5 @@ let rec resolve_mpar_ fcx1 f1 fcx2 f2 =
 
 let resolve_mpar f =
   let (fcx0, fcx1, f1, fcx2, f2) = Traversal.match_links (go_top f) in
-  (* let (fcx1, f1) = reduce_choices fcx1 f1 in *)
-  (* let (fcx2, f2) = reduce_choices fcx2 f2 in *)
   let f0 = resolve_mpar_ fcx1 f1 fcx2 f2 in
   go_top (subst fcx0 f0)

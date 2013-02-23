@@ -181,7 +181,7 @@ let key_enter mods =
           dwin#add_button_stock `CANCEL `CANCEL ;
           let lab = GMisc.label ~xalign:0.
             ~packing:(dwin#vbox#pack ~expand:false) () in
-          let msg = "Enter a witness term to replace " ^ (Idt.rep x) ^ ":\n" in
+          let msg = "Enter a witness term to replace " ^ (Idt.src_rep x) ^ ":\n" in
           lab#set_text msg ;
           let ebox = GEdit.entry ~text:""
             ~width:80

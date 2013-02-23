@@ -56,9 +56,10 @@ val unsubst : form -> fcx * form
 val unframe : frame -> form -> form
 val head1 : form -> form
 
-val free_term : int -> term -> bool
-val free_form : int -> form -> bool
-val free_fcx : int -> fcx -> form -> bool
+type test = dep:int -> term -> bool
+val test_term : test -> term        -> bool
+val test_form : test -> form        -> bool
+val test_fcx  : test -> fcx -> form -> bool
 
 val fcx_vars : fcx -> Idt.t list
 
