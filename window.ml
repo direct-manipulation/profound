@@ -8,6 +8,8 @@ open Batteries
 
 open Syntax
 
+module A = Action
+
 let wash_file = "tex/wash_form1.png"
 
 let form_to_pixbuf cur his =
@@ -94,7 +96,7 @@ let kmap = ref Map.empty
 let rec handle_key key =
   begin 
     let ksym = GdkEvent.Key.keyval key in
-    Log.(log TRACE "handle_key/ksym: 0x%04x" ksym) ;
+    Log.(log TRACE "handle_key/ksym: 0x%04x [%d]" ksym (GdkEvent.Key.hardware_keycode key)) ;
     let mods = GdkEvent.Key.state key in
     log_mods mods ;
     if Map.mem ksym !kmap then
@@ -110,30 +112,30 @@ let key_down _ =
     try
       rewrite_cur (go_down 0 gui.cur)
     with
-    | Traversal At_leaf ->
+    | Traversal_failure At_leaf ->
         flash "Cannot descend further"
-    | Traversal _ -> ()) ;
+    | Traversal_failure _ -> ()) ;
   true
 
 let key_up mods =
   Traversal.(
   let go_fn = if List.mem `SHIFT mods then go_top else go_up in
   try rewrite_cur (go_fn gui.cur) with
-  | Traversal At_top ->
+  | Traversal_failure At_top ->
       flash "Cannot ascend further"
-  | Traversal _ -> ()) ;
+  | Traversal_failure _ -> ()) ;
   true
 
 let key_left _ =
   Traversal.(try begin
     rewrite_cur (go_left gui.cur)
-  end with Traversal _ -> ()) ;
+  end with Traversal_failure _ -> ()) ;
   true
 
 let key_right _ =
   Traversal.(try begin
     rewrite_cur (go_right gui.cur)
-  end with Traversal _ -> ()) ;
+  end with Traversal_failure _ -> ()) ;
   true
 
 let key_delete _ =
@@ -262,7 +264,7 @@ let key_enter mods =
     end
   end with
   | Silently_fail
-  | Traversal _ -> ()) ;
+  | Traversal_failure _ -> ()) ;
   true
 
 let key_escape mods =
@@ -281,7 +283,7 @@ let key_z mods =
           rewrite_cur ~mmode cur
     end
   end with
-  | Traversal _ -> ()) ;
+  | Traversal_failure _ -> ()) ;
   true
 
 let really_quit () =
@@ -312,7 +314,7 @@ let key_q mods =
       end
     end
   end with
-  | Traversal _ -> ()) ;
+  | Traversal_failure _ -> ()) ;
   true
 
 let () =

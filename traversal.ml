@@ -12,16 +12,22 @@ type traversal_error =
   | At_leaf
   | At_top
   | At_edge
-  | No_such_child
+  | No_such_child of int
 
-exception Traversal of traversal_error
-let travfail err = raise (Traversal err)
+exception Traversal_failure of traversal_error
+let travfail err = raise (Traversal_failure err)
+let explain = function
+  | At_leaf -> "cannot descend further"
+  | At_top -> "cannot ascend further"
+  | At_edge -> "no siblings in that direction"
+  | No_such_child n ->
+      Printf.sprintf "could not descend to child #%d -- THIS IS A BUG (please report)" (n + 1)
 
 let rec split3 n xs =
   try begin match List.split_at n xs with
   | l, (u :: r) -> (l, u, r)
-  | _ -> travfail No_such_child
-  end with _ -> travfail No_such_child
+  | _ -> travfail (No_such_child n)
+  end with _ -> travfail (No_such_child n)
 
 let go_down n f =
   let (fcx, f) = unsubst f in
@@ -71,7 +77,7 @@ let go_left f =
           subst fcx lf
       | [] -> travfail At_edge
       end
-  | None -> travfail At_top
+  | None -> travfail At_edge
   end
 
 let go_right f =
@@ -88,7 +94,7 @@ let go_right f =
           subst fcx rf
       | [] -> travfail At_edge
       end
-  | None -> travfail At_top
+  | None -> travfail At_edge
  end
 
 type trail = int list

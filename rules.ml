@@ -20,6 +20,11 @@ type rule_error =
 
 exception Rule_failure of rule_error
 let rulefail err = raise (Rule_failure err)
+let explain = function
+  | Stuck -> "got stuck resolving link -- THIS IS A BUG (please report)"
+  | Promotion -> "link violates exponential boundaries"
+  | Not_par -> "common ancestor of source and sink not a par"
+  | Already_marked -> "trying to mark a marked formula -- THIS IS A BUG (please report)"
 
 let is_qm fcx f =
   begin match Cx.front fcx with
