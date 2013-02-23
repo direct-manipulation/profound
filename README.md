@@ -70,7 +70,7 @@ current selected subformula is indicated in braces {}.
 To start navigating, you will have to descend at least once (with the
 down key).
 
-Hit Shift-up to stop navigating subformulas, i.e., to go all the way
+Hit Shift-up to stop navigating subformulas, _i.e._, to go all the way
 back to the top.
 
 ### 4.2. Linking
@@ -116,10 +116,12 @@ system.
 
 If the current subformula is a ?-formula and has no marks in any subformula, then:
 
-- `Shift-Return` / `Shift-Enter` contracts it, i.e, it rewrites ?A to ?A
+- `Shift-Return` / `Shift-Enter` contracts it, _i.e._, it rewrites ?A to ?A
   \par ?A.
 
-- `Delete` applies weakening to it, i.e., it rewrites ?A to \bot.
+- `Delete` applies weakening to it, _i.e._, it rewrites ?A to \bot.
+
+- `?` applied dereliction to it, _i.e._, it rewrites ?A to A.
 
 If the current subformula is an operand of Plus, then:
 

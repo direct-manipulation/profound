@@ -51,8 +51,8 @@ let redisplay () =
       gui.img#set_pixbuf pix ;
       let _ = gui.stxt#push begin
         match gui.mmode with
-        | NO_MARKS -> "Select a subformula with ENTER to mark a source"
-        | HAS_SRC -> "Select a subformula to mark a sink"
+        | NO_MARKS -> "Waiting for SOURCE"
+        | HAS_SRC -> "Waiting for SINK"
         | HAS_BOTH -> "INTERNAL ERROR!"
       end in
       ()
@@ -154,6 +154,17 @@ let key_delete _ =
               flash "No rules allow deletion of this subformula"
           end
     end) ;
+  true
+
+let key_qm _ =
+  Traversal.(
+    let (fcx, f) = unsubst gui.cur in
+    match f with
+    | Conn (Qm, [f]) ->
+        rewrite_cur ~log:true (subst fcx f)
+    | _ ->
+        flash "Invalid dereliction: not a ?-formula"
+  ) ;
   true
 
 exception Silently_fail
@@ -322,6 +333,7 @@ let () =
     _Z, key_z ;
     _q, key_q ;
     _Q, key_q ;
+    _question, key_qm ;
   ]
 
 let startup f =
