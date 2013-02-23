@@ -63,11 +63,11 @@ let rec pp_form cx buf f =
           pp_term ~kon:false cx buf (App (p, ts)) ;
       end
   | Conn (Mark ARG, [f]) ->
-      add_string buf "\\hl{\\left\\{" ;
+      add_string buf "\\csr{" ;
       pp_form cx buf f ;
-      add_string buf "\\right\\}}"
+      add_string buf "}"
   | Conn (Mark (SRC | SNK as dir), [f]) ->
-      bprintf buf "{\\color{%s}"
+      bprintf buf "\\%s{"
         (match dir with SRC -> "src" | _ -> "dst") ;
       pp_form cx buf f ;
       add_string buf "}"
@@ -180,15 +180,21 @@ let set_dpi d =
 
 let () = set_dpi 120
 
+let pp_top cx buf f =
+  let (fcx, f) = unsubst f in
+  let f = conn (Mark ARG) [f] in
+  let f = go_top (subst fcx f) in
+  pp_form cx buf f
+
 let wash_forms ?(cx = []) cur his =
   let buf = Buffer.create 19 in
   add_string buf "\\cur{" ;
-  pp_form cx buf cur ;
+  pp_top cx buf cur ;
   add_string buf "}\n" ;
   List.iter begin
     fun f ->
       add_string buf "\\his{" ;
-      pp_form cx buf f ;
+      pp_top cx buf f ;
       add_string buf "}\n" ;
   end his ;
   let ch = open_out "/tmp/profound-render.tex" in

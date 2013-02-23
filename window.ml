@@ -60,7 +60,7 @@ let redisplay () =
 
 let rewrite_cur ?(log = false) ?mmode f =
   if log then gui.hist <- (gui.cur, gui.mmode) :: gui.hist ;
-  gui.cur <- f ;
+  gui.cur <- subst Deque.empty f ;
   (match mmode with Some mmode -> gui.mmode <- mmode | None -> ()) ;
   redisplay ()
 
@@ -325,7 +325,6 @@ let () =
   ]
 
 let startup f =
-  gui.cur <- f ;
   let win = GWindow.window
     ~title:"Profound"
     ~border_width:3
@@ -353,6 +352,6 @@ let startup f =
   let stxt = sbar#new_context "default" in
   gui.stxt <- stxt ;
   ignore (win#event#connect#key_press ~callback:handle_key) ;
-  redisplay () ;
+  rewrite_cur ~mmode:NO_MARKS f ;
   win#show () ;
   GMain.Main.main ()

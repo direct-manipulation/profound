@@ -6,9 +6,11 @@
 \usepackage{txfonts}
 \usepackage{xcolor}
 
-\colorlet{src}{blue!80!black}
-\colorlet{dst}{blue!50!red}
-\def\hl#1{{\color{red!80!black}#1}}
+\colorlet{src}{blue!20!white}
+\colorlet{dst}{red!20!white}
+\def\csr#1{\bgroup\fboxsep 1pt\fcolorbox{red}{dst}{$#1\mathstrut$}\egroup}
+\def\src#1{\bgroup\fboxsep 1pt\fcolorbox{src!80!black}{src}{$#1\mathstrut$}\egroup}
+\let\dst=\csr
 \long\def\cur#1{\hbox{\Large$#1$}}
 \long\def\his#1{\\\hbox{\footnotesize$#1$}}
 

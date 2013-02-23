@@ -300,16 +300,11 @@ let fconn fc = conn (conn_of_fconn fc)
 
 let subst1 fr f = subst (Deque.of_list [fr]) f
 
-let rec unsubst f k =
+let rec unsubst f =
   begin match f with
-  | Subst (fcx, f) ->
-      unsubst f begin
-        fun fcx' f ->
-          k (Deque.append fcx fcx') f
-      end
-  | _ -> k Deque.empty f
+  | Subst (fcx, f) -> (fcx, f)
+  | _ -> (Deque.empty, f)
   end
-let unsubst f = unsubst f (fun fcx f -> (fcx, f))
 
 let unframe fr f =
   fconn fr.fconn (List.rev_append fr.fleft (f :: fr.fright))
