@@ -34,6 +34,7 @@ let parse_opts () =
   let opts = [
     "-i", String set_infile, "<file> Read theorem from <file>" ;
     "-v", Int set_verbosity, "<num> Set vebosity to <num>" ;
+    "-log", String Log.to_file, "<file> Log output to file (default: stdout)" ;
     "-version", Unit (fun () ->
       Printf.printf "Profound %s [build of %s]\n" Version.str Version.built ;
       exit 0
@@ -69,8 +70,8 @@ let parse_opts () =
   end
         
 let main () =
-  let txt = String.trim (parse_opts ()) in
   Log.to_stdout () ;
+  let txt = String.trim (parse_opts ()) in
   Log.(log INFO "Profound %s [%s] START" Version.str Version.built) ;
   ignore (GMain.init ()) ;
   Log.(log INFO "GTK+ Initialized") ;
