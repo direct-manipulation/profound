@@ -14,9 +14,9 @@ open Traversal
 let add_idt buf i = add_string buf (Idt.tex_rep i)
 
 let add_fun kon buf f =
-  if kon then add_string buf "\\mathsf{" ;
+  add_string buf (if kon then "\\mathsf{" else "\\text{\\itshape ") ;
   add_idt buf f ;
-  if kon then add_string buf "}"
+  add_string buf "}"
 
 let rec pp_term ?(kon = true) cx buf t =
   begin match t with
