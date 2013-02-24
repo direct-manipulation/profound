@@ -267,7 +267,7 @@ let action_contract = {
     end
   end }
 
-let action_subst ~read = {
+let action_witness ~read = {
   enabled = begin fun hi ->
     let (_, f) = unsubst hi.work.form in
     match f with
@@ -315,75 +315,16 @@ let action_reset = {
     end
   end }
 
-(*
-
-(* key processing *)
-
-let mods_of ms =
-  List.fold_left begin
-    fun mfl -> function
-      | `CONTROL -> mfl lor 0b1
-      | `SHIFT   -> mfl lor 0b10
-      | _        -> mfl
-  end 0 ms
-type key = {code : Gdk.keysym ; mods : int}
-let key k = {
-  code = GdkEvent.Key.keyval k ;
-  mods = mods_of (GdkEvent.Key.state k) ;
-}
-
-type adesc = {
-  action : action ;
-  desc   : string ;
-  prio   : int ;
-}
-type kmap = (key, adesc list) Map.t
-
-let rec act_insert a las ras =
-  begin match ras with
-  | [] -> List.rev_append las [a]
-  | ra :: ras ->
-      let cmp = Int.compare a.prio ra.prio in
-      if cmp <= 0 then List.rev_append las (a :: ras)
-      else act_insert a (ra :: las) ras
-  end
-let add_action km (k, act) =
-  begin match Map.Exceptionless.find k km with
-  | Some acts ->
-      let acts = act_insert act [] acts in
-      Map.add k acts km
-  | None ->
-      Map.add k [act] km
-  end
-let make_kmap bindings : kmap =
-  List.fold_left add_action Map.empty bindings
-
-let explain_keys kmap hi =
-  let msgs : string list ref = ref [] in
-  let rec scan_ads key ads =
-    begin match ads with
-    | [] -> ()
-    | ad :: ads ->
-        if ad.action.enabled hi then
-          if ad.desc = "" then ()
-          else msgs := ad.desc :: !msgs
-        else scan_ads key ads
-    end in
-  Map.iter scan_ads kmap ;
-  String.concat ", " !msgs
-
-let handle_key (kmap : kmap) key hi =
-  begin match Map.Exceptionless.find key kmap with
-  | None -> Bad ""
-  | Some ads ->
-      let rec scan = function
-        | [] -> Bad ""
-        | ad :: ads ->
-            if ad.action.enabled hi
-            then ad.action.perform hi
-            else scan ads
-      in
-      scan ads
-  end
-
-*)
+let action_quit ~confirm ~quit = {
+  enabled = (fun _ -> true) ;
+  perform = begin fun hi ->
+    if (hi.past = [] && hi.future = []) || confirm ()
+    then (ignore (quit ()) ; Ok hi)
+    else Bad "cancelled quit"
+  end }
+      
+let action_save = {
+  enabled = (fun _ -> false) ;
+  perform = begin fun hi ->
+    Bad "saving currently disabled"
+  end }
