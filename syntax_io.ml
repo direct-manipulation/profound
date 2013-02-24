@@ -41,15 +41,10 @@ let rec index_form cx f =
 
 let parse_thing prs ind cx str =
   let lb = Lexing.from_string str in
-  let token lb =
-    Log.(log DEBUG "Trying to read a token...") ;
-    let res = Form_l.token lb in
-    Log.(log DEBUG "Read another token!") ;
-    res in
   try
-    let t = prs token lb in
+    let t = prs Syntax_lex.token lb in
     Ok (ind cx t)
-  with Form_p.Error -> Bad "reading term"
+  with Syntax_prs.Error -> Bad "reading term"
 
-let parse_form cx str = parse_thing Form_p.one_form index_form cx str
-let parse_term cx str = parse_thing Form_p.one_term index_term cx str
+let parse_form cx str = parse_thing Syntax_prs.one_form index_form cx str
+let parse_term cx str = parse_thing Syntax_prs.one_term index_term cx str

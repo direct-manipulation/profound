@@ -213,7 +213,7 @@ let key_enter mods =
           dwin#destroy () ;
           begin match resp with
           | `OK ->
-              begin match Syntax_prs.parse_term (fcx_vars fcx) txt with
+              begin match Syntax_io.parse_term (fcx_vars fcx) txt with
               | Ok t ->
                   let ss = Dot (Shift 0, t) in
                   let fb = sub_form ss fb in

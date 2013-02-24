@@ -5,7 +5,7 @@
 (******************************************************************************)
 
 {
-  module P = Form_p
+  module P = Syntax_prs
 
   let newline lb =
     Lexing.(

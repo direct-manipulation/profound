@@ -42,7 +42,7 @@ let read_term main_win x cx =
   dwin#destroy () ;
   begin match resp with
   | `OK ->
-      begin match Syntax_prs.parse_term cx txt with
+      begin match Syntax_io.parse_term cx txt with
       | Ok t -> Some t
       | _ -> None
       end
