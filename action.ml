@@ -271,7 +271,7 @@ let action_witness ~read = {
   enabled = begin fun hi ->
     let (_, f) = unsubst hi.work.form in
     match f with
-    | Conn (Ex _, _) -> true
+    | Conn (Qu (Ex, _), _) -> true
     | _ -> false
   end ;
   perform = begin fun hi ->
@@ -279,7 +279,7 @@ let action_witness ~read = {
       fun snap ->
         let (fcx, form) = unsubst snap.form in
         match form with
-        | Conn (Ex x, [fb]) ->
+        | Conn (Qu (Ex, x), [fb]) ->
             begin match read x (fcx_vars fcx) with
             | Some t ->
                 let ss = Dot (Shift 0, t)in

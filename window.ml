@@ -184,7 +184,7 @@ let key_enter mods =
             else
               rewrite_cur ~log:true (subst fcx (conn Par [f ; f]))
           end
-      | Conn (Ex x, [fb]) -> begin
+      | Conn (Qu (Ex, x), [fb]) -> begin
           let dwin = GWindow.dialog
             ~parent:gui.win
             ~title:"Witness input"

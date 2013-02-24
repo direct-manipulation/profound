@@ -30,7 +30,7 @@ let rec index_form cx f =
   begin match f with
   | Syntax.Atom (s, p, ts) ->
       atom s p (List.map (index_term cx) ts)
-  | Conn ((All x | Ex x) as q, fs) ->
+  | Conn (Qu (_, x) as q, fs) ->
       let fs = List.map (index_form (x :: cx)) fs in
       conn q fs
   | Conn (c, fs) ->

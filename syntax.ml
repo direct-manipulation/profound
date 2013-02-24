@@ -29,15 +29,17 @@ and frame = {
   fright : form list ;
 }
 
+and quant = All | Ex
+
 and conn =
   | Tens | Plus | Par | With
-  | All of idt | Ex of idt
+  | Qu of quant * idt
   | Bang | Qm
   | Mark of mkind
 
 and fconn = 
   | TENS | PLUS | PAR | WITH
-  | ALL of idt | EX of idt
+  | QU of quant * idt
   | BANG | QM
 
 and mkind =
@@ -56,7 +58,7 @@ and test_form_ dep test f =
   begin match f with
   | Atom (_, _, ts) ->
       List.exists (test_term_ dep test) ts
-  | Conn ((Ex _ | All _), fs) ->
+  | Conn (Qu _, fs) ->
       List.exists (test_form_ (dep + 1) test) fs
   | Conn (c, fs) ->
       List.exists (test_form_ dep test) fs
@@ -67,7 +69,7 @@ and test_form_ dep test f =
 and test_fcx_ dep test fcx f =
   begin match Cx.front fcx with
   | None -> test_form_ dep test f
-  | Some ({fconn = (EX _ | ALL _) ; _}, fcx) ->
+  | Some ({fconn = QU _ ; _}, fcx) ->
       test_fcx_ (dep + 1) test fcx f
   | Some (fr, fcx) ->
       List.exists (test_form_ dep test) fr.fleft
@@ -169,14 +171,21 @@ let fresh_for x f =
   else
     (x, f)
 
-let _Q q f =
+let _Q q x f =
   begin match f with
   | Conn (Tens, []) -> _One
-  | f -> Conn (q, [f])
+  | f ->
+      begin
+        let x =
+          if test_form (fun ~dep -> function App (f, _) -> f = x | _ -> false) f
+          then Idt.refresh x
+          else x in
+        Conn (Qu (q, x), [f])
+      end
   end
 
-let _All x f = _Q (All x) f
-let _Ex x f = _Q (Ex x) f
+let _All x f = _Q All x f
+let _Ex x f = _Q Ex x f
 
 let _Mark m f = Conn (Mark m, [f])
 
@@ -188,15 +197,14 @@ let mk_un fn fs =
 
 let conn c =
   begin match c with
-  | Tens   -> List.fold_left _Tens _One
-  | Plus   -> List.fold_left _Plus _Zero
-  | Par    -> List.fold_left _Par  _Bot
-  | With   -> List.fold_left _With _Top
-  | Bang   -> mk_un _Bang
-  | Qm     -> mk_un _Qm
-  | All x  -> mk_un (_All x)
-  | Ex x   -> mk_un (_Ex x)
-  | Mark m -> mk_un (_Mark m)
+  | Tens      -> List.fold_left _Tens _One
+  | Plus      -> List.fold_left _Plus _Zero
+  | Par       -> List.fold_left _Par  _Bot
+  | With      -> List.fold_left _With _Top
+  | Bang      -> mk_un _Bang
+  | Qm        -> mk_un _Qm
+  | Qu (q, x) -> mk_un (_Q q x)
+  | Mark m    -> mk_un (_Mark m)
   end
 
 type sub =
@@ -226,9 +234,9 @@ and sub_form ss f =
       else atom s p [t1 ; t2]
   | Atom (s, p, ts) ->
       atom s p (List.map (sub_term ss) ts)
-  | Conn ((All x | Ex x) as c, [f]) ->
-      requantify c (sub_form (bump ss) f)
-  | Conn ((All _ | Ex _), _) -> assert false
+  | Conn (Qu (q, x), [f]) ->
+      _Q q x (sub_form (bump ss) f)
+  | Conn (Qu _, _) -> assert false
   | Conn (c, fs) ->
       conn c (List.map (sub_form ss) fs)
   | Subst (fcx, f) ->
@@ -236,17 +244,9 @@ and sub_form ss f =
       subst fcx (sub_form ss f)
   end
 
-and requantify q f =
-  let x = match q with (All x | Ex x) -> x | _ -> assert false in
-  let q =
-    if test_form (fun ~dep -> function App (f, _) -> f = x | _ -> false) f
-    then (match q with All x -> All (Idt.refresh x) | Ex x -> Ex (Idt.refresh x) | _ -> assert false)
-    else q in
-  conn q [f]
-
 and sub_fcx ss fcx =
   begin match Cx.front fcx with
-  | Some ({ fconn = (ALL _ | EX _) ; _ } as fr, fcx) ->
+  | Some ({ fconn = QU _ ; _ } as fr, fcx) ->
       let (fcx, ss) = sub_fcx (bump ss) fcx in
       (Cx.cons fr fcx, ss)
   | Some (fr, fcx) ->
@@ -275,7 +275,7 @@ and seq ss tt =
 
 let rec fcx_vars fcx =
   begin match Cx.rear fcx with
-  | Some (fcx, {fconn = (EX x | ALL x) ; _}) ->
+  | Some (fcx, {fconn = QU (_, x) ; _}) ->
       x :: fcx_vars fcx
   | Some (fcx, _) ->
       fcx_vars fcx
@@ -286,14 +286,14 @@ let rec fcx_vars fcx =
 let fconn_of_conn = function
   | Tens -> TENS | Plus -> PLUS
   | Par -> PAR | With -> WITH
-  | All x -> ALL x | Ex x -> EX x
+  | Qu (q, x) -> QU (q, x)
   | Bang -> BANG | Qm -> QM
   | _ -> invalid_arg "fconn_of_conn"
 
 let conn_of_fconn = function
   | TENS -> Tens | PLUS -> Plus
   | PAR -> Par | WITH -> With
-  | ALL x -> All x | EX x -> Ex x
+  | QU (q, x) -> Qu (q, x)
   | BANG -> Bang | QM -> Qm
 
 let fconn fc = conn (conn_of_fconn fc)

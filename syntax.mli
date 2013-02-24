@@ -27,15 +27,17 @@ and frame = {
   fright : form list;
 }
 
+and quant = All | Ex
+
 and conn =
   | Tens | Plus | Par | With
-  | All of Idt.t | Ex of Idt.t
+  | Qu of quant * Idt.t
   | Bang | Qm
   | Mark of mkind
 
 and fconn =
   | TENS | PLUS | PAR | WITH
-  | ALL of Idt.t | EX of Idt.t
+  | QU of quant * Idt.t
   | BANG | QM
 
 and mkind = ARG | SRC | SNK

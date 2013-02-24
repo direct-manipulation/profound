@@ -73,7 +73,7 @@ let rec pp_form cx buf f =
       add_string buf "}"
   | Conn (p, []) ->
       add_string buf (kon_string p)
-  | Conn ((All x | Ex x) as p, [f]) ->
+  | Conn (Qu (_, x) as p, [f]) ->
       add_un buf p ;
       pp_check_bracket ~p (x :: cx) buf f
   | Conn (p, [f]) ->
@@ -94,7 +94,7 @@ let rec pp_form cx buf f =
 
 and extend cx fcx =
   begin match Deque.front fcx with
-  | Some ({ fconn = (ALL x | EX x) ; _}, fcx) ->
+  | Some ({ fconn = QU (_, x) ; _}, fcx) ->
       extend (x :: cx) fcx
   | Some (_, fcx) ->
       extend cx fcx
@@ -129,7 +129,7 @@ and pp_bracket cx buf f =
   add_string buf "\\right)"
 
 and is_un = function
-  | All _ | Ex _ | Bang | Qm -> true
+  | Qu _ | Bang | Qm -> true
   | _ -> false
 
 and bin_string = function
@@ -140,11 +140,11 @@ and bin_string = function
   | _ -> assert false
 
 and add_un buf = function
-  | All x ->
+  | Qu (All, x) ->
       add_string buf "\\ALL " ;
       add_idt buf x ;
       add_string buf ". "
-  | Ex x ->
+  | Qu (Ex, x) ->
       add_string buf "\\EX " ;
       add_idt buf x ;
       add_string buf ". "
@@ -164,7 +164,7 @@ and prec = function
   | Plus -> 1 (* 2 *)
   | With -> 1 (* 3 *)
   | Tens -> 1 (* 4 *)
-  | Ex _ | All _ -> 0
+  | Qu _ -> 0
   | Bang | Qm -> 6
   | Mark _ -> max_int
 

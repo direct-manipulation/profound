@@ -114,8 +114,7 @@ let is_src f =
 let maybe_refresh fr fcx f =
   let (x, rx) =
     begin match fr.fconn with
-    | EX x -> (x, fun () -> EX (Idt.refresh x))
-    | ALL x -> (x, fun () -> ALL (Idt.refresh x))
+    | QU (q, x) -> (x, fun () -> QU (q, Idt.refresh x))
     | _ -> assert false
     end in
   let test ~dep t =
@@ -164,13 +163,13 @@ let rec resolve_mpar_ fcx1 f1 fcx2 f2 =
         fright = List.map dist fr.fright ;
       } in
       unframe fr f0
-  | Some ({fconn = ALL x ; _} as fr, fcx1), _ ->
+  | Some ({fconn = QU (All, x) ; _} as fr, fcx1), _ ->
       let fr = maybe_refresh fr fcx2 f2 in
       let (fcx2, ss) = sub_fcx (Shift 1) fcx2 in
       let f2 = sub_form ss f2 in
       let f0 = resolve_mpar_ fcx1 f1 fcx2 f2 in
       unframe fr f0
-  | _, Some ({fconn = ALL x ; _} as fr, fcx2) ->
+  | _, Some ({fconn = QU (All, x) ; _} as fr, fcx2) ->
       let fr = maybe_refresh fr fcx1 f1 in
       let (fcx1, ss) = sub_fcx (Shift 1) fcx1 in
       let f1 = sub_form ss f1 in
@@ -191,8 +190,8 @@ let rec resolve_mpar_ fcx1 f1 fcx2 f2 =
       resolve_mpar_ fcx1 f1 fcx2 f2
   | _, Some ({fconn = PLUS ; _}, fcx2) ->
       resolve_mpar_ fcx1 f1 fcx2 f2
-  | Some ({fconn = EX x1 ; _} as fr1, fcx1d),
-    Some ({fconn = EX x2 ; _} as fr2, fcx2d) ->
+  | Some ({fconn = QU (Ex, x1) ; _} as fr1, fcx1d),
+    Some ({fconn = QU (Ex, x2) ; _} as fr2, fcx2d) ->
       if is_src f1 then begin
         let fr2 = maybe_refresh fr2 fcx1 f1 in
         let (fcx1, ss) = sub_fcx (Shift 1) fcx1 in
@@ -206,13 +205,13 @@ let rec resolve_mpar_ fcx1 f1 fcx2 f2 =
         let f0 = resolve_mpar_ fcx1d f1 fcx2 f2 in
         unframe fr1 f0
       end
-  | Some ({fconn = EX x ; _} as fr, fcx1), _ ->
+  | Some ({fconn = QU (Ex, x) ; _} as fr, fcx1), _ ->
       let fr = maybe_refresh fr fcx2 f2 in
       let (fcx2, ss) = sub_fcx (Shift 1) fcx2 in
       let f2 = sub_form ss f2 in
       let f0 = resolve_mpar_ fcx1 f1 fcx2 f2 in
       unframe fr f0
-  | _, Some ({fconn = EX x ; _} as fr, fcx2) ->
+  | _, Some ({fconn = QU (Ex, x) ; _} as fr, fcx2) ->
       let fr = maybe_refresh fr fcx1 f1 in
       let (fcx1, ss) = sub_fcx (Shift 1) fcx1 in
       let f1 = sub_form ss f1 in
