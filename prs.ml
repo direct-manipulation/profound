@@ -4,6 +4,8 @@
 (* See LICENSE for licensing details.                                         *)
 (******************************************************************************)
 
+open Batteries
+
 type 'a prs = { prs : pst -> 'a resp }
 
 and pst = {
@@ -11,24 +13,22 @@ and pst = {
   mutable off  : int ;
 }
 
-and 'a resp =
-  | Read of 'a
-  | Fail of int * string
+and 'a resp = ('a, int * string) Result.t
 
 let parse p input off =
   let pst = { input ; off } in
   match p.prs pst with
-    | Read a -> Read (a, pst.off)
-    | Fail (pos, msg) -> Fail (pos, msg)
+    | Ok a -> Ok (a, pst.off)
+    | Bad (pos, msg) -> Bad (pos, msg)
 
 let parse_full p input off =
   let pst = { input ; off } in
   match p.prs pst with
-    | Read a ->
+    | Ok a ->
         if pst.off = String.length pst.input
-        then Read a
-        else Fail (pst.off, "unconsumed input remains")
-    | Fail (pos, msg) -> Fail (pos, msg)
+        then Ok a
+        else Bad (pst.off, "unconsumed input remains")
+    | Bad (pos, msg) -> Bad (pos, msg)
 
 let wsprex = Pcre.regexp ~flags:[`MULTILINE] "\\s*"
 
@@ -44,8 +44,8 @@ let fuzzy word =
       let off = skip wsprex off pst.input in
       let next_off = skip rex off pst.input in
       pst.off <- next_off ;
-      Read (String.sub pst.input off (next_off - off))
-    end with Not_found -> Fail (pst.off, "fuzzy: " ^ word)
+      Ok (String.sub pst.input off (next_off - off))
+    end with Not_found -> Bad (pst.off, "fuzzy: " ^ word)
   }
 
 let exact word =
@@ -54,8 +54,8 @@ let exact word =
       let off = pst.off in
       let next_off = skip rex off pst.input in
       pst.off <- next_off ;
-      Read (String.sub pst.input off (next_off - off))
-    end with Not_found -> Fail (pst.off, "exact: " ^ word)
+      Ok (String.sub pst.input off (next_off - off))
+    end with Not_found -> Bad (pst.off, "exact: " ^ word)
   }
 
 let regex ?(skipws = true) rex = {
@@ -66,27 +66,27 @@ let regex ?(skipws = true) rex = {
                else off) in
     let next_off = skip rex off pst.input in
     pst.off <- next_off ;
-    Read (String.sub pst.input off (next_off - off))
-  end with Not_found -> Fail (pst.off, "regex")
+    Ok (String.sub pst.input off (next_off - off))
+  end with Not_found -> Bad (pst.off, "regex")
 }
 
 let eoi = {
   prs = fun pst -> try begin
     let off = skip wsprex pst.off pst.input in
     pst.off <- off ;
-    Read ()
-  end with Not_found -> Fail (pst.off, "eoi")
+    Ok ()
+  end with Not_found -> Bad (pst.off, "eoi")
 }
 
-let return x = { prs = fun pst -> Read x }
+let return x = { prs = fun pst -> Ok x }
 
-let fail msg = { prs = fun pst -> Fail (pst.off, msg) }
+let fail msg = { prs = fun pst -> Bad (pst.off, msg) }
 
 let ( >>= ) p qf = {
   prs = fun pst ->
     match p.prs pst with
-      | Read a -> (qf a).prs pst
-      | Fail (pos, msg) -> Fail (pos, msg)
+      | Ok a -> (qf a).prs pst
+      | Bad (pos, msg) -> Bad (pos, msg)
 }
 
 let bind = ( >>= )
@@ -94,63 +94,63 @@ let bind = ( >>= )
 let ( <$> ) p fn = {
   prs = fun pst ->
     match p.prs pst with
-      | Read a -> Read (fn a)
-      | Fail (pos, msg) -> Fail (pos, msg)
+      | Ok a -> Ok (fn a)
+      | Bad (pos, msg) -> Bad (pos, msg)
 }
 
 let ( <!> ) p x = {
   prs = fun pst ->
     match p.prs pst with
-      | Read _ -> Read x
-      | Fail (pos, msg) -> Fail (pos, msg)
+      | Ok _ -> Ok x
+      | Bad (pos, msg) -> Bad (pos, msg)
 }
 
 let ( >>> ) p q = {
   prs = fun pst ->
     match p.prs pst with
-      | Read _ -> q.prs pst
-      | Fail (pos, msg) -> Fail (pos, msg)
+      | Ok _ -> q.prs pst
+      | Bad (pos, msg) -> Bad (pos, msg)
 }
 
 let ( <<< ) p q = {
   prs = fun pst ->
     match p.prs pst with
-      | Read a -> begin match q.prs pst with
-          | Read _ -> Read a
-          | Fail (pos, msg) -> Fail (pos, msg)
+      | Ok a -> begin match q.prs pst with
+          | Ok _ -> Ok a
+          | Bad (pos, msg) -> Bad (pos, msg)
         end
-      | Fail (pos, msg) -> Fail (pos, msg)
+      | Bad (pos, msg) -> Bad (pos, msg)
 }
 
 let ( <*> ) p q = {
   prs = fun pst ->
     match p.prs pst with
-      | Read a -> begin match q.prs pst with
-          | Read b -> Read (a, b)
-          | Fail (pos, msg) -> Fail (pos, msg)
+      | Ok a -> begin match q.prs pst with
+          | Ok b -> Ok (a, b)
+          | Bad (pos, msg) -> Bad (pos, msg)
         end
-      | Fail (pos, msg) -> Fail (pos, msg)
+      | Bad (pos, msg) -> Bad (pos, msg)
 }
 
 let ( <::> ) p q = {
   prs = fun pst ->
     match p.prs pst with
-      | Read a -> begin match q.prs pst with
-          | Read bs -> Read (a :: bs)
-          | Fail (pos, msg) -> Fail (pos, msg)
+      | Ok a -> begin match q.prs pst with
+          | Ok bs -> Ok (a :: bs)
+          | Bad (pos, msg) -> Bad (pos, msg)
         end
-      | Fail (pos, msg) -> Fail (pos, msg)
+      | Bad (pos, msg) -> Bad (pos, msg)
 }
 
 let star p =
   let rec q = {
     prs = fun pst ->
       match p.prs pst with
-        | Fail _ -> Read []
-        | Read x -> begin
+        | Bad _ -> Ok []
+        | Ok x -> begin
             match q.prs pst with
-              | Read xs -> Read (x :: xs)
-              | Fail _ -> failwith "impossible failure"
+              | Ok xs -> Ok (x :: xs)
+              | Bad _ -> failwith "impossible failure"
           end
   } in
   q
@@ -161,12 +161,12 @@ let sep s p =
   let rec q = {
     prs = fun pst ->
       match p.prs pst with
-        | Fail _ -> Read []
-        | Read x -> begin match s.prs pst with
-            | Fail _ -> Read [x]
-            | Read _ -> begin match q.prs pst with
-                | Read xs -> Read (x :: xs)
-                | Fail _ -> failwith "impossible failure"
+        | Bad _ -> Ok []
+        | Ok x -> begin match s.prs pst with
+            | Bad _ -> Ok [x]
+            | Ok _ -> begin match q.prs pst with
+                | Ok xs -> Ok (x :: xs)
+                | Bad _ -> failwith "impossible failure"
               end
           end
   } in
@@ -180,8 +180,8 @@ let rec alt = function
       let q = alt ps in {
         prs = fun pst ->
           match p.prs pst with
-            | Read x -> Read x
-            | Fail _ -> q.prs pst
+            | Ok x -> Ok x
+            | Bad _ -> q.prs pst
       }
   | [] -> invalid_arg "alt"
 
@@ -199,18 +199,18 @@ let attempt p = {
   prs = fun pst ->
     let off = pst.off in
     match p.prs pst with
-      | Read x -> Read x
-      | Fail (pos, msg) ->
+      | Ok x -> Ok x
+      | Bad (pos, msg) ->
           pst.off <- off ;
-          Fail (pos, msg)
+          Bad (pos, msg)
 }
 
 let ( <|> ) p q = {
   prs = fun pst ->
     let off = pst.off in
     match p.prs pst with
-      | Read x -> Read x
-      | Fail _ ->
+      | Ok x -> Ok x
+      | Bad _ ->
           pst.off <- off ;
           q.prs pst
 }
@@ -219,31 +219,31 @@ let optional p = {
   prs = fun pst ->
     let off = pst.off in
     match p.prs pst with
-      | Read x -> Read (Some x)
-      | Fail (pos, msg) ->
+      | Ok x -> Ok (Some x)
+      | Bad (pos, msg) ->
           pst.off <- off ;
-          Read None
+          Ok None
 }
 
 let ( <?> ) p chk = {
   prs = fun pst ->
     let off = pst.off in
     match p.prs pst with
-      | Read x when chk x -> Read x
+      | Ok x when chk x -> Ok x
       | _ ->
-          pst.off <- off ; Fail (off, "<?>")
+          pst.off <- off ; Bad (off, "<?>")
 }
 
 let ( <$?> ) p wrp = {
   prs = fun pst ->
     let off = pst.off in
     match p.prs pst with
-      | Read x -> begin match wrp x with
-          | Some x -> Read x
-          | None -> pst.off <- off ; Fail (off, "<$?>")
+      | Ok x -> begin match wrp x with
+          | Some x -> Ok x
+          | None -> pst.off <- off ; Bad (off, "<$?>")
         end
       | _ ->
-          pst.off <- off ; Fail (off, "<?>")
+          pst.off <- off ; Bad (off, "<?>")
 }
 
 let lift1 f ap =

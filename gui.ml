@@ -44,7 +44,7 @@ let read_term main_win x cx =
   begin match resp with
   | `OK ->
       begin match Syntax_prs.parse_term cx txt with
-      | Prs.Read t -> Some t
+      | Ok t -> Some t
       | _ -> None
       end
   | _ -> None

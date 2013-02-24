@@ -4,9 +4,7 @@
 (* See LICENSE for licensing details.                                         *)
 (******************************************************************************)
 type 'a prs
-and 'a resp =
-  | Read of 'a
-  | Fail of int * string
+and 'a resp = ('a, int * string) Batteries.Result.t
 val parse : 'a prs -> string -> int -> ('a * int) resp
 val parse_full : 'a prs -> string -> int -> 'a resp
 val fuzzy : string -> string prs

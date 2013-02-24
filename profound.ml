@@ -80,8 +80,8 @@ let main () =
   Log.(log INFO "GTK+ Initialized") ;
   let frm =
     begin match Syntax_prs.parse_form txt with
-    | Prs.Read f -> f
-    | Prs.Fail _ ->
+    | Ok f -> f
+    | Bad _ ->
         Log.(log FATAL "Could not parse theorem. Text follows:\n%s" txt) ;
         exit 1
     end in

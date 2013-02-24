@@ -214,7 +214,7 @@ let key_enter mods =
           begin match resp with
           | `OK ->
               begin match Syntax_prs.parse_term (fcx_vars fcx) txt with
-              | Prs.Read t ->
+              | Ok t ->
                   let ss = Dot (Shift 0, t) in
                   let fb = sub_form ss fb in
                   let f = subst fcx fb in
