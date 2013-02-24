@@ -9,6 +9,7 @@ all:
 
 clean:
 	${OCB} -clean
+	${RM} version.ml
 
 top:
 	OCAMLRUNPARAM=b ocaml
