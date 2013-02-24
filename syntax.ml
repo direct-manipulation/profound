@@ -242,7 +242,7 @@ and requantify q f =
     if test_form (fun ~dep -> function App (f, _) -> f = x | _ -> false) f
     then (match q with All x -> All (Idt.refresh x) | Ex x -> Ex (Idt.refresh x) | _ -> assert false)
     else q in
-  Conn (q, [f])
+  conn q [f]
 
 and sub_fcx ss fcx =
   begin match Cx.front fcx with
