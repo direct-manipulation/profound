@@ -9,6 +9,7 @@ open Batteries
 open Syntax
 
 module A = Action
+module G = Gui
 
 let wash_file = "tex/wash_form1.png"
 
