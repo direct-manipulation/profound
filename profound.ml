@@ -8,6 +8,9 @@ open Batteries
 
 open Syntax
 
+module P = Form_p
+module L = Form_l
+
 let set_verbosity v =
   let open Log in
   begin match v with
