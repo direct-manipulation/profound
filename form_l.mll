@@ -5,6 +5,8 @@
 (******************************************************************************)
 
 {
+  module P = Form_p
+
   let newline lb =
     Lexing.(
       lb.lex_curr_p <- { lb.lex_curr_p with
@@ -15,7 +17,7 @@
 }
 
 let ident_initial = ['A'-'Z' 'a'-'z']
-let ident_body    = ident_initial | ['_']
+let ident_body    = ident_initial | ['0'-'9' '_']
 let ident         = ident_initial ident_body*
 
 let space         = ' ' | '\t'
@@ -27,29 +29,40 @@ rule token = parse
 | space            { token lexbuf }
 | newline          { newline lexbuf ; token lexbuf }
 
-| "~" | "\\lnot"   { Form_p.LNOT }
+| ident            { P.IDENT (Idt.intern (Lexing.lexeme lexbuf)) }
 
-| '*' | "\\tensor" { Form_p.TENSOR }
-| '1' | "\\one"    { Form_p.ONE }
-| '+' | "\\plus"   { Form_p.PLUS }
-| '0' | "\\zero"   { Form_p.ZERO }
+| "~" | "\\lnot"   { P.LNOT }
 
-| '|' | "\\par"    { Form_p.PAR }
-| "#F" | "\\bot"   { Form_p.BOT }
-| "&" | "\\with"   { Form_p.WITH }
-| "#T" | "\\top"   { Form_p.TOP }
+| '*' | "\\tensor" { P.TENSOR }
+| '1' | "\\one"    { P.ONE }
+| '+' | "\\plus"   { P.PLUS }
+| '0' | "\\zero"   { P.ZERO }
 
-| '!'              { Form_p.BANG }
-| '?'              { Form_p.QM }
+| '|' | "\\par"    { P.PAR }
+| "#F" | "#f"
+| "\\bot"          { P.BOT }
+| "&" | "\\with"   { P.WITH }
+| "#T" | "#t"
+| "\\top"          { P.TOP }
 
-| "\\A"            { Form_p.FORALL }
-| "\\E"            { Form_p.EXISTS }
+| '!'              { P.BANG }
+| '?'              { P.QM }
 
-| ','              { Form_p.COMMA }
-| '.'              { Form_p.DOT }
-| '('              { Form_p.LPAREN }
-| ')'              { Form_p.RPAREN }
+| "\\A"            { P.FORALL }
+| "\\E"            { P.EXISTS }
+
+| ','              { P.COMMA }
+| '.'              { P.DOT }
+| '('              { P.LPAREN }
+| ')'              { P.RPAREN }
+
+| eof              { P.EOS }
+| _                {
+  Printf.eprintf "Invalid character %s\n%!" (String.escaped (Lexing.lexeme lexbuf)) ;
+  raise P.Error
+}
 
 and line_comment = parse
 | newline          { newline lexbuf ; token lexbuf }
+| eof              { P.EOS }
 | _                { line_comment lexbuf }

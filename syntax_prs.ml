@@ -7,85 +7,7 @@
 open Batteries
 
 open Syntax
-open Prs
-
-type 'a lprs = 'a prs Lazy.t
-
-let ident = regex (Pcre.regexp "\\G[A-Za-z][A-Za-z0-9_]*") <$> Idt.intern
-
-let rec form : form lprs = lazy begin
-  resolve (use token)
-end
-
-and token = lazy begin
-  alt [
-    (fuzzy "\\tensor" <|> fuzzy "*")
-    <!> Appl (50, Infix (Left, _Tens)) ;
-
-    (fuzzy "\\one" <|> fuzzy "1")
-    <!> Atom _One ;
-
-    (fuzzy "\\plus" <|> fuzzy "+")
-    <!> Appl (20, Infix (Left, _Plus)) ;
-
-    (fuzzy "\\zero" <|> fuzzy "0")
-    <!> Atom _Zero ;
-
-    fuzzy "!" <!> Appl (60, Prefix _Bang) ;
-
-    (fuzzy "\\par" <|> fuzzy "|" <|> fuzzy ",")
-    <!> Appl (30, Infix (Left, _Par)) ;
-
-    (fuzzy "\\bot" <|> fuzzy "#F")
-    <!> Atom _Bot ;
-
-    (fuzzy "\\with" <|> fuzzy "&")
-    <!> Appl (40, Infix (Left, _With)) ;
-
-    (fuzzy "\\top" <|> fuzzy "#T")
-    <!> Atom _Top ;
-
-    fuzzy "?" <!> Appl (60, Prefix _Qm) ;
-
-    (fuzzy "\\A" <|> fuzzy "\\E")
-    <*> sep1 (fuzzy ",") ident
-    <<< fuzzy "."
-    <$> (fun (q, vs) ->
-           let qf v f = match q with
-             | "\\A" -> _All v f
-             | _ -> _Ex v f
-           in
-           let rec mk vs f = match vs with
-             | [] -> f
-             | v :: vs -> mk vs (qf v f)
-           in
-           Appl (10, Prefix (mk (List.rev vs)))) ;
-
-    ident <*> use params
-    <$> (fun (p, ts) -> Atom (atom ASSERT p ts)) ;
-
-    (fuzzy "\\lnot" <|> fuzzy "~") >>>
-      ident <*> use params
-    <$> (fun (p, ts) -> Atom (atom REFUTE p ts)) ;
-
-    (fuzzy "(" >>> use form <<< fuzzy ")")
-    <$> (fun f -> Atom f) ;
-  ]
-end
-
-and params = lazy begin
-  alt [
-    fuzzy "(" >>> sep1 (fuzzy ",") (use term) <<< fuzzy ")" ;
-    return []
-  ]
-end
-
-and term = lazy begin
-  ident <*> use params
-  <$> (fun (f, ts) -> App (f, ts))
-end
-
-let term = Lazy.force term
+open Result
 
 let rec index_term cx = function
   | Idx n -> Idx n
@@ -116,6 +38,18 @@ let rec index_form cx f =
   | Subst _ -> assert false
   end
 
-let parse_term cx str = Prs.parse_full (term <$> index_term cx) str 0
 
-let parse_form str = Prs.parse_full (Lazy.force form <$> index_form []) str 0
+let parse_thing prs ind cx str =
+  let lb = Lexing.from_string str in
+  let token lb =
+    Log.(log DEBUG "Trying to read a token...") ;
+    let res = Form_l.token lb in
+    Log.(log DEBUG "Read another token!") ;
+    res in
+  try
+    let t = prs token lb in
+    Ok (ind cx t)
+  with Form_p.Error -> Bad "reading term"
+
+let parse_form cx str = parse_thing Form_p.one_form index_form cx str
+let parse_term cx str = parse_thing Form_p.one_term index_term cx str

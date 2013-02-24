@@ -7,7 +7,6 @@
 open Batteries
 open Syntax
 
-
 let read_term main_win x cx =
   let dwin = GWindow.dialog
     ~parent:main_win

@@ -79,7 +79,7 @@ let main () =
   ignore (GMain.init ()) ;
   Log.(log INFO "GTK+ Initialized") ;
   let frm =
-    begin match Syntax_prs.parse_form txt with
+    begin match Syntax_prs.parse_form [] txt with
     | Ok f -> f
     | Bad _ ->
         Log.(log FATAL "Could not parse theorem. Text follows:\n%s" txt) ;
