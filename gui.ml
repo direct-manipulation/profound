@@ -201,6 +201,24 @@ struct
                      ; desc   = "^Y=redo"              } ;
       add ~c _Up     { action = action_redo
                      ; desc   = ""                     } ;
+      let action_more_history = {
+        enabled = (fun _ -> true) ;
+        perform = (fun hi ->
+          incr Syntax_tex.max_hist ;
+          Log.(log INFO "Now showing %d history line(s)" !Syntax_tex.max_hist) ;
+          Ok hi
+        ) } in
+      add ~s _plus   { action = action_more_history
+                     ; desc   = ""                     } ;
+      let action_less_history = {
+        enabled = (fun _ -> !Syntax_tex.max_hist >= 1) ;
+        perform = (fun hi ->
+          decr Syntax_tex.max_hist ;
+          Log.(log INFO "Now showing %d history line(s)" !Syntax_tex.max_hist) ;
+          Ok hi
+        ) } in
+      add _minus     { action = action_less_history
+                     ; desc   = ""                     } ;
       begin match Param.mode with
       | Imm _ ->
           let action_quit = {
@@ -281,10 +299,7 @@ struct
             true
         | Handled -> true
         end
-    | None ->
-        Log.(log TRACE "Unknown key %05d [%s]"
-               key.code (GdkEvent.Key.string kt)) ;
-        false
+    | None -> false
     end
 
   let _ = main_win#event#connect#key_press ~callback:handle_key

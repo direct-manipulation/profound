@@ -34,12 +34,19 @@ let set_infile fn =
       end
   end
 
+let set_max_hist n =
+  let m = max 0 (min n 20) in
+  if m <> n then
+    Log.(log WARN "Cannot display %d history lines; displaying %d instead" n m) ;
+  Syntax_tex.max_hist := m
+
 let parse_opts () =
   let open Arg in
   let opts = [
     "-i", String set_infile, "<file> Read theorem from <file>" ;
     "-v", Int set_verbosity, "<num> Set vebosity to <num>" ;
     "-log", String Log.to_file, "<file> Log output to file (default: stdout)" ;
+    "-hist-lines", Int set_max_hist, "<num> Set the number of history lines to display to <num>" ;
     "-version", Unit (fun () ->
       Printf.printf "Profound %s [build of %s]\n" Version.str Version.built ;
       exit 0
@@ -76,8 +83,8 @@ let parse_opts () =
         
 let main () =
   Log.to_stdout () ;
-  let mode = parse_opts () in
   Log.(log INFO "Profound %s [%s] START" Version.str Version.built) ;
+  let mode = parse_opts () in
   ignore (GMain.init ()) ;
   Log.(log INFO "GTK+ Initialized") ;
   Gui.run mode ;

@@ -11,6 +11,8 @@ open Printf
 open Syntax
 open Traversal
 
+let max_hist = ref 3
+
 let add_idt buf i = add_string buf (Idt.tex_rep i)
 
 let add_fun kon buf f =
@@ -187,21 +189,21 @@ let pp_top cx buf f =
   pp_form cx buf f
 
 let wash_fut cx buf fut =
-  let rec thrice n fut =
+  let rec bounded_display n fut =
     begin match n, fut with
     | _, [] -> ()
     | 0, (_ :: _) ->
         add_string buf "\\\\\n$\\pmb\\vdots$"
     | n, ff :: fut ->
-        thrice (n - 1) fut ;
+        bounded_display (n - 1) fut ;
         add_string buf "\\\\\n\\his{" ;
         pp_top cx buf ff ;
         add_string buf "}\n"
     end in
-  thrice 3 fut
+  bounded_display !max_hist fut
 
 let wash_past cx buf past =
-  let rec thrice n past =
+  let rec bounded_display n past =
     begin match n, past with
     | _, [] -> ()
     | 0, (_ :: _) ->
@@ -210,9 +212,9 @@ let wash_past cx buf past =
         add_string buf "\\his{" ;
         pp_top cx buf pf ;
         add_string buf "}\\\\\n" ;
-        thrice (n - 1) past ;
+        bounded_display (n - 1) past ;
     end in
-  thrice 3 past
+  bounded_display !max_hist past
 
 let wash_forms ?(cx = []) hi =
   let (past, pres, future) = Action.render hi in
