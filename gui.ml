@@ -198,7 +198,7 @@ struct
       add ~c _y      { action = action_redo
                      ; desc   = "^Y=redo"              } ;
       add ~c ~s _Z   { action = action_redo
-                     ; desc   = "^Y=redo"              } ;
+                     ; desc   = ""                     } ;
       add ~c _Up     { action = action_redo
                      ; desc   = ""                     } ;
       let action_more_history = {
