@@ -22,6 +22,7 @@ You will need:
 * [OCaml Batteries Included][batteries]
 * [pcre-ocaml][pcre]
 * [LablGTK2][lablgtk]
+* [Menhir]
 * A LaTeX distribution (eg. TeXLive) that contains AMS Math and dvipng
 
 Please consider using [OPAM] to install OCaml and the above libraries.
@@ -127,7 +128,7 @@ If the current subformula is a ?-formula and has no marks in any subformula, the
 
 - `Shift-Delete` applies weakening to it, _i.e._, it rewrites ?A to \bot.
 
-- `?` applied dereliction to it, _i.e._, it rewrites ?A to A.
+- `?` applies dereliction to it, _i.e._, it rewrites ?A to A.
 
 If the current subformula is an existential, then:
 
@@ -144,3 +145,4 @@ If the current subformula is an existential, then:
 [pcre]: https://bitbucket.org/mmottl/pcre-ocaml
 [lablgtk]: http://lablgtk.forge.ocamlcore.org/
 [OPAM]: http://opam.ocamlpro.com/
+[Menhir]: http://gallium.inria.fr/~fpottier/menhir/
