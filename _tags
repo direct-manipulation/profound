@@ -1,2 +1,2 @@
 true: use_menhir
-<*.ml*> or <*.native> or <*.byte> : package(unix), package(pcre), package(batteries), package(lablgtk2)
+<*.ml*> or <*.native> or <*.byte> : package(unix), package(batteries), package(lablgtk2)

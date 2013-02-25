@@ -20,7 +20,6 @@ You will need:
 * [OCaml] version 3.12.1 or later
 * [ocaml-findlib][findlib]
 * [OCaml Batteries Included][batteries]
-* [pcre-ocaml][pcre]
 * [LablGTK2][lablgtk]
 * [Menhir]
 * A LaTeX distribution (eg. TeXLive) that contains AMS Math and dvipng
@@ -142,7 +141,6 @@ If the current subformula is an existential, then:
 [OCaml]: http://caml.inria.fr/ocaml
 [findlib]: http://projects.camlcity.org/projects/findlib.html
 [batteries]: http://batteries.forge.ocamlcore.org/
-[pcre]: https://bitbucket.org/mmottl/pcre-ocaml
 [lablgtk]: http://lablgtk.forge.ocamlcore.org/
 [OPAM]: http://opam.ocamlpro.com/
 [Menhir]: http://gallium.inria.fr/~fpottier/menhir/
