@@ -93,24 +93,38 @@ Intuitively, the source is "brought to" the sink.
 
 ### 4.3. History
 
+The proof state is presented as a linear _timeline_ with the _present_
+shown in the middle in a large font, and the _past_ and _future_ below
+and above the present.
+
 Whenever a link is resolved or the current theorem is rewritten, the
-previous state of the theorem is prepended to the _history_, which is
-displayed below the theorem.
+previous state of the theorem is prepended to the _past_.
 
 To go back to an earlier form, hit `Ctrl-Z`.
 
-(Currently there is no way to go forward in history by redoing earlier
-steps -- this functionality will be added in the near future with a
-symmetric display of known futures above the main theorem.)
+Going back in history shows the known future _above_ the theorem line.
+You can return to any of the futures in the current timeline by
+hitting `Ctrl-Y`.
+
+Note that any rule application that modifies the text of the theorem
+will alter the current timeline and therefore will remove the futures
+from the earlier timeline. (There is currently no way to restore a lost
+timeline -- after a number of experiments, I came to the conclusion
+that allowing too much branching in time adds only confusion.)
+
+By default only the three most recent past and future states are
+shown. You can change this with the `-hist-lines` command line
+parameter, and dynamically using the `+` and `-` keys.
 
 ### 4.4. Saving and quitting
 
-To save the current state of the proof, hit `Ctrl-S`.
+To quit, hit `Ctrl-Q`.
 
-(Saving is currently buggy and disabled.)
+If the input came from a file, the current state of the proof is saved
+on quitting. When working on the same file again, the previous state is
+restored, including the full undo and redo histories.
 
-To quit, hit `Ctrl-Q` or just close the window using your windowing
-system.
+A save can also be forced at any time using `Ctrl-S`.
 
 ### 4.5. Other interactions
 
