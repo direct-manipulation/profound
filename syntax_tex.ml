@@ -23,7 +23,11 @@ let add_fun kon buf f =
 let rec pp_term ?(kon = true) cx buf t =
   begin match t with
   | Idx n ->
-      add_idt buf (List.nth cx n)
+      begin try add_idt buf (List.nth cx n)
+        with _ ->
+          add_string buf "`" ;
+          add_string buf (string_of_int n)
+      end
   | App (f, []) ->
       add_fun kon buf f
   | App (f, ts) ->
@@ -217,12 +221,11 @@ let wash_past cx buf past =
     end in
   bounded_display !max_hist past
 
-let wash_forms ?(cx = []) hi =
-  let (past, pres, future) = Action.render hi in
+let wash_forms ?(cx = []) (past, present, future) =
   let buf = Buffer.create 19 in
   wash_fut cx buf future ;
   add_string buf "\\cur{" ;
-  pp_top cx buf pres ;
+  pp_top cx buf present ;
   add_string buf "}\n" ;
   wash_past cx buf past ;
   let ch = open_out "/tmp/profound-render.tex" in

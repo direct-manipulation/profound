@@ -14,7 +14,6 @@ open Traversal
 type rule_error =
   | Stuck
   | Promotion
-  | Not_par
   | Already_marked
 
 exception Rule_failure of rule_error
@@ -22,7 +21,6 @@ let rulefail err = raise (Rule_failure err)
 let explain = function
   | Stuck -> "got stuck resolving link -- THIS IS A BUG (please report)"
   | Promotion -> "link violates exponential boundaries"
-  | Not_par -> "common ancestor of source and sink not a par"
   | Already_marked -> "trying to mark a marked formula -- THIS IS A BUG (please report)"
 
 let is_qm fcx f =
@@ -66,43 +64,6 @@ let main_arg f =
   | _ -> f
   end
 
-exception Found of form
-
-let find_form pred f0 =
-  let rec find_loop f0 =
-    let (fcx, f) = unsubst f0 in
-    if pred f then raise (Found f0) else
-      begin match f with
-      | Conn (Mark _, _)
-      | Atom _ -> ()
-      | Conn (_, fs) ->
-          for i = 0 to List.length fs - 1 do
-            find_loop (go_down i f0)
-          done
-      | Subst _ -> assert false
-      end
-  in
-  try find_loop f0 ; raise Not_found with
-  | Found f -> f
-
-let find_lnk f =
-  let f = find_form (function Conn (Mark (SRC | SNK), _) -> true | _ -> false) f in
-  unsubst f
-
-let has_lnk f =
-  try ignore (find_lnk f) ; true with Not_found -> false
-
-let make_lnk dir f =
-  let (fcx, f) = unsubst f in
-  if has_lnk f then rulefail Already_marked ;
-  subst fcx (conn (Mark dir) [f])
-
-let unlnk f =
-  begin match f with
-  | Conn (Mark (SRC | SNK), [f]) -> f
-  | _ -> f
-  end
-
 let is_src f =
   begin match f with
   | Conn (Mark SRC, _) -> true
@@ -120,11 +81,170 @@ let maybe_refresh fr fcx f =
   then { fr with fconn = rx () }
   else fr
 
+let rec find_marked f =
+  begin match f with
+  | Atom _ -> None
+  | Subst _ -> assert false
+  | Conn (Mark _, _) -> Some (Cx.empty, f)
+  | Conn (c, fs) ->
+      begin match find_marked_arg [] fs with
+      | Some (lfs, fcx, f, rfs) ->
+          let fr = {
+            fconn = fconn_of_conn c ;
+            fleft = lfs ;
+            fright = rfs ;
+          } in
+          let fcx = Cx.cons fr fcx in
+          Some (fcx, f)
+      | None -> None
+      end
+  end
+
+and find_marked_arg lfs rfs =
+  begin match rfs with
+  | [] -> None
+  | f :: rfs ->
+      begin match find_marked f with
+      | Some (fcx, f) ->
+          Some (lfs, fcx, f, rfs)
+      | None ->
+          find_marked_arg (f :: lfs) rfs
+      end
+  end
+
+let find_frame_mate fr0 fcx1 f1 =
+  let rec scan_left lfs rfs =
+    begin match lfs with
+    | [] -> None
+    | lf :: lfs ->
+        begin match find_marked lf with
+        | Some (fcx2, f2) ->
+            Some (lfs, fcx2, f2, rfs, fcx1, f1, fr0.fright)
+        | None ->
+            scan_left lfs (lf :: rfs)
+        end
+    end
+  and scan_right lfs rfs =
+    begin match rfs with
+    | [] -> None
+    | rf :: rfs ->
+        begin match find_marked rf with
+        | Some (fcx2, f2) ->
+            Some (fr0.fleft, fcx1, f1, lfs, fcx2, f2, rfs)
+        | None ->
+            scan_right (rf :: lfs) rfs
+        end
+    end
+  in
+  begin match scan_left fr0.fleft [] with
+  | None -> scan_right [] fr0.fright
+  | res -> res
+  end
+
+let rec find_fcx_mate fcx0 fcx1 f1 =
+  begin match Cx.rear fcx0 with
+  | Some (fcx0, fr0) ->
+      begin match find_frame_mate fr0 fcx1 f1 with
+      | Some (lfs, fcx1, f1, mfs, fcx2, f2, rfs) ->
+          let fr0 = { fr0 with
+            fleft = lfs ;
+            fright = List.rev_append mfs rfs ;
+          } in
+          let fcx0 = Cx.snoc fcx0 fr0 in
+          Some (fcx0, fcx1, f1, fcx2, f2)
+      | None ->
+          let fcx1 = Cx.cons fr0 fcx1 in
+          find_fcx_mate fcx0 fcx1 f1
+      end
+  | None -> None
+  end
+
+type link_matching_error =
+  | First_mark_not_found
+  | Second_mark_not_found
+  | Invalid_marks
+  | Bad_ancestor
+exception Link_matching of link_matching_error
+let linkfail err = raise (Link_matching err)
+let explain_link_error = function
+  | First_mark_not_found ->
+      "Source was not found -- THIS IS A BUG (please report)"
+  | Second_mark_not_found ->
+      "Sink was not found -- THIS IS A BUG (please report)"
+  | Invalid_marks ->
+      "Marks were not valid -- THIS IS A BUG (please report)"
+  | Bad_ancestor ->
+      "no common par of ? ancestor of source and sink"
+
+let rec lowest_qm f r =
+  begin match Cx.rear f with
+  | Some (f, ({fconn = QM ; _} as fr)) -> (f, Cx.cons fr r)
+  | Some (f, fr) -> lowest_qm f (Cx.cons fr r)
+  | None -> linkfail Bad_ancestor
+  end
+
+let unravel gcx fcx1 f1 fcx2 f2 =
+  begin match Cx.rear gcx with
+  | Some (gcx, fr) ->
+      let fr1 = {fr with fright = subst fcx2 (unmark f2) :: fr.fright} in
+      let fr2 = {fr with fleft = subst fcx1 (unmark f1) :: fr.fleft} in
+      let fcx1 = Cx.cons fr1 fcx1 in
+      let fcx2 = Cx.cons fr2 fcx2 in
+      (Cx.append gcx fcx1, Cx.append gcx fcx2)
+  | None -> assert false
+  end
+
+let maybe_contract fcx0 fcx1 f1 fcx2 f2 =
+  begin match Cx.rear fcx0 with
+  | Some (_, {fconn = PAR ; _}) ->
+      (fcx0, fcx1, f1, fcx2, f2)
+  | _ ->
+      Log.(log DEBUG "Had to contract") ;
+      let (fcx0, gcx) = lowest_qm fcx0 Cx.empty in
+      let fcx0 = Cx.snoc fcx0 { fconn = PAR ; fleft = [] ; fright = [] } in
+      let (fcx1, fcx2) = unravel gcx fcx1 f1 fcx2 f2 in
+      (fcx0, fcx1, f1, fcx2, f2)
+  end
+
+(* let __debug = atom ASSERT (Idt.intern  "__debug") [] *)
+
+let match_links f =
+  begin match find_marked f with
+  | Some (fcx0, f1) ->
+      begin match find_fcx_mate fcx0 Cx.empty f1 with
+      | Some (fcx0, fcx1, f1, fcx2, f2) ->
+          (* Log.(log DEBUG "match_links PRE begin") ; *)
+          (* Log.(log DEBUG " f0 = %s" (Syntax_tex.form_to_string [] (subst fcx0 __debug))) ; *)
+          (* Log.(log DEBUG " f1 = %s" (Syntax_tex.form_to_string (fcx_vars fcx0) (subst fcx1 f1))) ; *)
+          (* Log.(log DEBUG " f2 = %s" (Syntax_tex.form_to_string (fcx_vars fcx0) (subst fcx2 f2))) ; *)
+          (* Log.(log DEBUG "match_links PRE end") ; *)
+          let (fcx0, fcx1, f1, fcx2, f2) as res = maybe_contract fcx0 fcx1 f1 fcx2 f2 in
+          (* Log.(log DEBUG "match_links POST begin") ; *)
+          (* Log.(log DEBUG " f0 = %s" (Syntax_tex.form_to_string [] (subst fcx0 __debug))) ; *)
+          (* Log.(log DEBUG " f1 = %s" (Syntax_tex.form_to_string (fcx_vars fcx0) (subst fcx1 f1))) ; *)
+          (* Log.(log DEBUG " f2 = %s" (Syntax_tex.form_to_string (fcx_vars fcx0) (subst fcx2 f2))) ; *)
+          (* Log.(log DEBUG "match_links POST end") ; *)
+          (* begin match Cx.rear fcx0 with *)
+          (* | Some (_, {fconn = PAR ; _}) -> () *)
+          (* | _ -> linkfail Invalid_marks *)
+          (* end ; *)
+          begin match f1, f2 with
+          | Conn (Mark SRC, _), Conn (Mark SNK, _)
+          | Conn (Mark SNK, _), Conn (Mark SRC, _) -> ()
+          | _ -> linkfail Invalid_marks
+          end ;
+          res
+      | None -> linkfail Second_mark_not_found
+      end
+  | None ->
+      linkfail First_mark_not_found
+  end
+
 let rec resolve_mpar_ fcx1 f1 fcx2 f2 =
   begin match Cx.front fcx1, Cx.front fcx2 with
   | None, None ->
-      let f1 = unlnk f1 in
-      let f2 = unlnk f2 in
+      let f1 = unmark f1 in
+      let f2 = unmark f2 in
       begin match f1, f2 with
       | Atom (s1, p1, ts1), Atom (s2, p2, ts2)
         when s1 <> s2 && p1 = p2 ->
@@ -141,7 +261,7 @@ let rec resolve_mpar_ fcx1 f1 fcx2 f2 =
       unframe fr f0
   | Some ({fconn = WITH ; _} as fr, fcx1), _ ->
       let f0 = resolve_mpar_ fcx1 f1 fcx2 f2 in
-      let u2 = go_top (subst fcx2 (unlnk f2)) in
+      let u2 = go_top (subst fcx2 (unmark f2)) in
       let dist f = conn Par [f ; u2] in
       let fr = { fr with
         fleft = List.map dist fr.fleft ;
@@ -150,7 +270,7 @@ let rec resolve_mpar_ fcx1 f1 fcx2 f2 =
       unframe fr f0
   | _, Some ({fconn = WITH ; _} as fr, fcx2) ->
       let f0 = resolve_mpar_ fcx1 f1 fcx2 f2 in
-      let u1 = go_top (subst fcx1 (unlnk f1)) in
+      let u1 = go_top (subst fcx1 (unmark f1)) in
       let dist f = conn Par [u1 ; f] in
       let fr = { fr with
         fleft = List.map dist fr.fleft ;
@@ -227,6 +347,6 @@ let rec resolve_mpar_ fcx1 f1 fcx2 f2 =
   end
 
 let resolve_mpar f =
-  let (fcx0, fcx1, f1, fcx2, f2) = Traversal.match_links (go_top f) in
+  let (fcx0, fcx1, f1, fcx2, f2) = match_links (go_top f) in
   let f0 = resolve_mpar_ fcx1 f1 fcx2 f2 in
   go_top (subst fcx0 f0)

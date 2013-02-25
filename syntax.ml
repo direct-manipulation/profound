@@ -180,7 +180,28 @@ let _Q q x f =
 let _All x f = _Q All x f
 let _Ex x f = _Q Ex x f
 
-let _Mark m f = Conn (Mark m, [f])
+exception Cannot_mark
+
+let rec has_mark f =
+  begin match f with
+  | Conn (Mark _, _) -> true
+  | Conn (q, fs) -> List.exists has_mark fs
+  | Atom _ -> false
+  | Subst (fcx, f) -> has_mark_fcx fcx || has_mark f
+  end
+
+and has_mark_fcx fcx =
+  begin match Cx.front fcx with
+  | Some ({fleft ; fright ; _}, fcx) ->
+      List.exists has_mark fleft
+      || List.exists has_mark fright
+      || has_mark_fcx fcx
+  | None -> false
+  end
+
+let mark m f = 
+  if has_mark f then raise Cannot_mark ;
+  Conn (Mark m, [f])
 
 let mk_un fn fs =
   begin match fs with
@@ -197,7 +218,13 @@ let conn c =
   | Bang      -> mk_un _Bang
   | Qm        -> mk_un _Qm
   | Qu (q, x) -> mk_un (_Q q x)
-  | Mark m    -> mk_un (_Mark m)
+  | Mark m    -> (fun fs -> Conn (c, fs))
+  end
+
+let unmark f =
+  begin match f with
+  | Conn (Mark _, [f]) -> f
+  | _ -> f
   end
 
 type sub =

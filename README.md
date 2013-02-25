@@ -83,9 +83,9 @@ or `Enter` keys. This will turn the current selection blue. Any
 subformula of the theorem can be a source -- not just the atoms.
 
 To complete a link (technical term: mark a sink), navigate to another
-subformula that is ancestrally joined to the source via a par. Then
-hit `Return` or `Enter` again. Any suitable subformula can be a sink,
-not just atoms.
+subformula that is ancestrally joined to the source via a par or a ?.
+Then hit `Return` or `Enter` again. Any suitable subformula can be a
+sink, not just atoms.
 
 When a link completes, the source and sink interact hereditarily, with
 all ties broken in favor of the sink having outermost scope.

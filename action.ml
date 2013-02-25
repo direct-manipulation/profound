@@ -80,8 +80,8 @@ let commit ~fn hi =
     let past = hi.work :: hi.past in
     Ok { work = present ; dirty = false ; past ; present ; future = [] }
   with
-  | Traversal.Link_matching err -> Bad (Traversal.explain_link_error err)
   | Traversal.Traversal_failure err -> Bad (Traversal.explain err)
+  | Rules.Link_matching err -> Bad (Rules.explain_link_error err)
   | Rules.Rule_failure err -> Bad (Rules.explain err)
   | Action_failure err -> Bad (explain err)
 
@@ -183,7 +183,9 @@ let action_mark_source = {
   perform = begin fun hi ->
     tinker hi ~fn:begin
       fun snap ->
-        let form = Rules.make_lnk SRC snap.form in
+        let (fcx, f) = unsubst snap.form in
+        let _ = (try mark SRC f with Cannot_mark -> assert false) in
+        let form = subst fcx (mark SRC f) in
         let mmode = Marked in
         { form ; mmode }
     end
@@ -202,13 +204,10 @@ let action_unmark_source = {
     tinker hi ~fn:begin
       fun snap ->
         let (fcx, f) = unsubst snap.form in
-        match f with
-        | Conn (Mark SRC, [f]) ->
-            let form = subst fcx f in
-            let mmode = Unmarked in
-            { form ; mmode }
-        | _ ->
-            assert false
+        let f = unmark f in
+        let form = subst fcx f in
+        let mmode = Unmarked in
+        { form ; mmode }
     end
   end }
 
@@ -217,7 +216,7 @@ let action_zero = {
     let (_, f) = unsubst hi.work.form in
     match f with
     | Conn (Plus, []) -> false
-    | _ -> not (Rules.has_lnk f)
+    | _ -> not (has_mark f)
   end ;
   perform = begin fun hi ->
     commit hi ~fn:begin
@@ -232,7 +231,7 @@ let action_weaken = {
   enabled = begin fun hi ->
     let (_, f) = unsubst hi.work.form in
     match f with
-    | Conn (Qm, [f]) -> not (Rules.has_lnk f)
+    | Conn (Qm, [f]) -> not (has_mark f)
     | _ -> false
   end ;
   perform = begin fun hi ->
@@ -267,7 +266,7 @@ let action_contract = {
   enabled = begin fun hi ->
     let (_, f) = unsubst hi.work.form in
     match f with
-    | Conn (Qm, [f]) -> not (Rules.has_lnk f)
+    | Conn (Qm, [f]) -> not (has_mark f)
     | _ -> false
   end ;
   perform = begin fun hi ->
@@ -311,12 +310,13 @@ let action_witness ~read = {
 let action_complete_link = {
   enabled = begin fun hi ->
     hi.work.mmode = Marked
-    && not (Rules.has_lnk (focus hi.work.form))
+    && not (has_mark (focus hi.work.form))
   end ;
   perform = begin fun hi ->
     commit hi ~fn:begin
       fun snap ->
-        let form = Rules.make_lnk SNK snap.form in
+        let (fcx, f) = unsubst snap.form in
+        let form = subst fcx (mark SNK f) in
         let form = Rules.resolve_mpar form in
         { mmode = Unmarked ; form }
     end

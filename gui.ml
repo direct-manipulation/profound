@@ -189,6 +189,8 @@ struct
                      ; desc   = "Shift-Del=weaken"     } ;
       add ~s _Return { action = action_contract
                      ; desc   = "Shift-Enter=contract" } ;
+      add ~s _question { action = action_derelict
+                       ; desc = "?=derelict"           } ;
       add ~s _Return { action = action_witness ~read:read_term
                      ; desc   = "Shift-Enter=witness"  } ;
       add ~c _z      { action = action_undo
@@ -261,7 +263,7 @@ struct
 
   let redisplay () =
     if not !awaiting_quit then begin
-      Syntax_tex.wash_forms !state ;
+      Syntax_tex.wash_forms (Action.render !state) ;
       let pix = GdkPixbuf.from_file wash_file in
       stat#pop () ;
       ignore (stat#push (explain_keys ())) ;
