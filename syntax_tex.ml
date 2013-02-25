@@ -109,7 +109,8 @@ and needs_bracket p f =
   | Atom _
   | Conn ((Tens | Plus | With | Par), []) -> false
   | Conn (q, _) ->
-      not (p = q || (is_un p && is_un q) || prec p < prec q)
+      not (p = q || is_un q)
+      (* not (p = q || (is_un p && is_un q) || prec p < prec q) *)
   | Subst _ -> assert false
   end
 
