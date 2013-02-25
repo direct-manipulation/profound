@@ -114,18 +114,20 @@ system.
 
 ### 4.5. Other interactions
 
+On any subformula
+
+- `Delete` rewrites it to 0. Note that `0 \plus A` and `A \plus 0`
+  will be rewritten to `A` eagerly when ascending out of the current
+  context.
+
 If the current subformula is a ?-formula and has no marks in any subformula, then:
 
 - `Shift-Return` / `Shift-Enter` contracts it, _i.e._, it rewrites ?A to ?A
   \par ?A.
 
-- `Delete` applies weakening to it, _i.e._, it rewrites ?A to \bot.
+- `Shift-Delete` applies weakening to it, _i.e._, it rewrites ?A to \bot.
 
 - `?` applied dereliction to it, _i.e._, it rewrites ?A to A.
-
-If the current subformula is an operand of Plus, then:
-
-- `Delete` deletes the subformula if it has no marks in any of its subformulas.
 
 If the current subformula is an existential, then:
 
