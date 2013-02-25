@@ -203,6 +203,15 @@ type link_matching_error =
   | Bad_ancestor
 exception Link_matching of link_matching_error
 let linkfail err = raise (Link_matching err)
+let explain_link_error = function
+  | First_mark_not_found ->
+      "Source was not found -- THIS IS A BUG (please report)"
+  | Second_mark_not_found ->
+      "Sink was not found -- THIS IS A BUG (please report)"
+  | Invalid_marks ->
+      "Marks were not valid -- THIS IS A BUG (please report)"
+  | Bad_ancestor ->
+      "Common ancestor of source and sink is not a par -- did you forget a contraction?"
 
 let match_links f : fcx * fcx * form * fcx * form =
   begin match find_marked f with

@@ -187,6 +187,15 @@ let _Q q x f =
 let _All x f = _Q All x f
 let _Ex x f = _Q Ex x f
 
+let _Q_capture q x f =
+  begin match f with
+  | Conn (Tens, []) -> _One
+  | f -> Conn (Qu (q, x), [f])
+  end
+
+let _All_capture x f = _Q_capture All x f
+let _Ex_capture x f = _Q_capture Ex x f
+
 let _Mark m f = Conn (Mark m, [f])
 
 let mk_un fn fs =
@@ -318,3 +327,27 @@ let head1 f =
       end
   | _ -> f
 
+let focus f =
+  let (_fcx, f) = unsubst f in
+  f
+
+let aeq_conn c1 c2 =
+  begin match c1, c2 with
+  | Qu (All, _), Qu (All, _)
+  | Qu (Ex, _), Qu (Ex, _) -> true
+  | _ -> c1 = c2
+  end
+
+let rec aeq_forms f1 f2 =
+  begin match head1 f1, head1 f2 with
+  | Atom (s1, p1, t1s), Atom (s2, p2, t2s)
+    when s1 = s2 && p1 = p2 ->
+      List.for_all2 (=) t1s t2s
+  | Conn (c1, f1s), Conn (c2, f2s)
+    when aeq_conn c1 c2 ->
+      List.length f1s = List.length f2s
+      && List.for_all2 aeq_forms f1s f2s
+  | Subst _, _
+  | _, Subst _ -> assert false
+  | _ -> false
+  end

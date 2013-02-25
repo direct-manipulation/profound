@@ -1,4 +1,11 @@
 (******************************************************************************)
+(* action.ml --- gui                                                          *)
+(*                                                                            *)
+(* Author: Kaustuv Chaudhuri <kaustuv.chaudhuri@inria.fr>                     *)
+(* Copyright (C) 2013  INRIA                                                  *)
+(* See LICENSE for licensing details.                                         *)
+(******************************************************************************)
+(******************************************************************************)
 (* Author: Kaustuv Chaudhuri <kaustuv.chaudhuri@inria.fr>                     *)
 (* Copyright (C) 2013  INRIA                                                  *)
 (* See LICENSE for licensing details.                                         *)
@@ -31,8 +38,18 @@ let init f =
   let cur = {
     form = f ;
     mmode = Unmarked ;
-  } in
-  { work = cur ; dirty = false ; past = [] ; present = cur ; future = [] }
+  } in {
+    work = cur ; dirty = false ;
+    past = [] ; present = cur ; future = []
+  }
+
+let is_history_of hi f =
+  let cand =
+    begin match hi.past with
+    | [] -> hi.present.form
+    | _ -> (List.last hi.past).form
+    end in
+  aeq_forms cand f
 
 let strip_mmode snap = snap.form
 let render hi =
@@ -63,6 +80,7 @@ let commit ~fn hi =
     let past = hi.work :: hi.past in
     Ok { work = present ; dirty = false ; past ; present ; future = [] }
   with
+  | Traversal.Link_matching err -> Bad (Traversal.explain_link_error err)
   | Traversal.Traversal_failure err -> Bad (Traversal.explain err)
   | Rules.Rule_failure err -> Bad (Rules.explain err)
   | Action_failure err -> Bad (explain err)
@@ -71,6 +89,8 @@ type action = {
   enabled : history -> bool ;
   perform : history -> (history, string) Result.t
 }
+
+type t = action
 
 let action_undo = {
   enabled = (fun hi -> hi.dirty || hi.past <> []) ;
@@ -295,6 +315,7 @@ let action_witness ~read = {
 let action_complete_link = {
   enabled = begin fun hi ->
     hi.work.mmode = Marked
+    && not (Rules.has_lnk (focus hi.work.form))
   end ;
   perform = begin fun hi ->
     commit hi ~fn:begin
@@ -313,18 +334,4 @@ let action_reset = {
         let form = Traversal.cleanup snap.form in
         { mmode = Unmarked ; form }
     end
-  end }
-
-let action_quit ~confirm ~quit = {
-  enabled = (fun _ -> true) ;
-  perform = begin fun hi ->
-    if (hi.past = [] && hi.future = []) || confirm ()
-    then (ignore (quit ()) ; Ok hi)
-    else Bad "cancelled quit"
-  end }
-      
-let action_save = {
-  enabled = (fun _ -> false) ;
-  perform = begin fun hi ->
-    Bad "saving currently disabled"
   end }

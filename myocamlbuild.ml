@@ -27,7 +27,7 @@ let make_version msg =
   Printf.fprintf och "let patch = %d;;\n" patch ;
   Printf.fprintf och "let built = \"%s\";;\n" built ;
   Printf.fprintf och "let tag   = \"%s\";;\n\n" tag ;
-  Printf.fprintf och "let str   = \"%d.%d.%d%s%s\";;\n"
+  Printf.fprintf och "let str   = \"%d.%d.%d%s%s\";;\n\n"
     major minor patch
     (if tag = "" then "" else "-") tag ;
   flush och ;

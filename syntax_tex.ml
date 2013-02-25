@@ -186,17 +186,42 @@ let pp_top cx buf f =
   let f = go_top (subst fcx f) in
   pp_form cx buf f
 
-let wash_forms ?(cx = []) cur his =
+let wash_fut cx buf fut =
+  let rec thrice n fut =
+    begin match n, fut with
+    | _, [] -> ()
+    | 0, (_ :: _) ->
+        add_string buf "\\\\\n$\\pmb\\vdots$"
+    | n, ff :: fut ->
+        thrice (n - 1) fut ;
+        add_string buf "\\\\\n\\his{" ;
+        pp_top cx buf ff ;
+        add_string buf "}\n"
+    end in
+  thrice 3 fut
+
+let wash_past cx buf past =
+  let rec thrice n past =
+    begin match n, past with
+    | _, [] -> ()
+    | 0, (_ :: _) ->
+        add_string buf "$\\pmb\\vdots$\\\\\n"
+    | n, pf :: past ->
+        add_string buf "\\his{" ;
+        pp_top cx buf pf ;
+        add_string buf "}\\\\\n" ;
+        thrice (n - 1) past ;
+    end in
+  thrice 3 past
+
+let wash_forms ?(cx = []) hi =
+  let (past, pres, future) = Action.render hi in
   let buf = Buffer.create 19 in
+  wash_fut cx buf future ;
   add_string buf "\\cur{" ;
-  pp_top cx buf cur ;
+  pp_top cx buf pres ;
   add_string buf "}\n" ;
-  List.iter begin
-    fun f ->
-      add_string buf "\\his{" ;
-      pp_top cx buf f ;
-      add_string buf "}\n" ;
-  end his ;
+  wash_past cx buf past ;
   let ch = open_out "/tmp/profound-render.tex" in
   output_string ch (Buffer.contents buf) ;
   close_out ch ;
@@ -205,3 +230,12 @@ let wash_forms ?(cx = []) cur his =
     exit 4 (* random exit code *)
   end
 
+let term_to_string cx t =
+  let buf = Buffer.create 19 in
+  pp_term cx buf t ;
+  Buffer.contents buf
+
+let form_to_string cx f =
+  let buf = Buffer.create 19 in
+  pp_form cx buf f ;
+  Buffer.contents buf

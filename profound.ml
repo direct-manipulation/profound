@@ -26,7 +26,12 @@ let set_infile fn =
       Printf.eprintf "Cannot specify more than one input file\n%!" ;
       exit 1
   | None ->
-      infile := Some fn
+      if Sys.file_exists fn then
+        infile := Some fn
+      else begin
+        Log.(log FATAL "Could not find input file %S" fn) ;
+        exit 2
+      end
   end
 
 let parse_opts () =
@@ -58,11 +63,11 @@ let parse_opts () =
   begin match !infile, !imm_txt with
   | Some inf, Some txt ->
       Log.(log ERROR "Ignoring input file %S" inf) ;
-      txt
-  | Some inf, None ->
-      input_file inf
+      Gui.Imm txt
+  | Some fin, None ->
+      Gui.File fin
   | None, Some txt ->
-      txt
+      Gui.Imm txt
   | None, None ->
       Printf.eprintf "Need an input file or theorem\n%!" ;
       Arg.usage opts umsg ;
@@ -71,18 +76,11 @@ let parse_opts () =
         
 let main () =
   Log.to_stdout () ;
-  let txt = String.trim (parse_opts ()) in
+  let mode = parse_opts () in
   Log.(log INFO "Profound %s [%s] START" Version.str Version.built) ;
   ignore (GMain.init ()) ;
   Log.(log INFO "GTK+ Initialized") ;
-  let frm =
-    begin match Syntax_io.parse_form [] txt with
-    | Ok f -> f
-    | Bad _ ->
-        Log.(log FATAL "Could not parse theorem. Text follows:\n%s" txt) ;
-        exit 1
-    end in
-  Window.startup frm ;
+  Gui.run mode ;
   Log.(log INFO "Done") ;
   Log.reset ()
 

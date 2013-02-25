@@ -56,6 +56,9 @@ val fconn : fconn -> form list -> form
 
 val unsubst : form -> fcx * form
 val unframe : frame -> form -> form
+
+val focus : form -> form
+
 val head1 : form -> form
 
 type test = dep:int -> term -> bool
@@ -81,3 +84,8 @@ val _All  : Idt.t -> form -> form
 val _Ex   : Idt.t -> form -> form
 val _Bang : form -> form
 val _Qm   : form -> form
+
+val _All_capture  : Idt.t -> form -> form
+val _Ex_capture   : Idt.t -> form -> form
+
+val aeq_forms : form -> form -> bool

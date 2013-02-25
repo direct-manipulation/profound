@@ -8,11 +8,11 @@
 
 \colorlet{src}{blue!20!white}
 \colorlet{dst}{red!20!white}
-\def\csr#1{\bgroup\fboxsep 1pt\fcolorbox{red}{dst}{$#1\mathstrut$}\egroup}
-\def\src#1{\bgroup\fboxsep 1pt\fcolorbox{src!80!black}{src}{$#1\mathstrut$}\egroup}
+\def\csr#1{\bgroup\fboxsep 1pt\fcolorbox{dst!70!black}{dst}{$#1\mathstrut$}\egroup}
+\def\src#1{\bgroup\fboxsep 1pt\fcolorbox{src!70!black}{src}{$#1\mathstrut$}\egroup}
 \let\dst=\csr
-\long\def\cur#1{\hbox{\Large$#1$}}
-\long\def\his#1{\\\hbox{\footnotesize$#1$}}
+\long\def\cur#1{\\[2ex]\hbox{\Large$#1$}\\[2ex]}
+\long\def\his#1{\hbox{\scriptsize$#1$}}
 
 \def\TENS{\otimes}
 \def\PAR{\invamp}
@@ -31,8 +31,8 @@
 
 \thispagestyle{empty}
 
-\begin{gather*}
+\begin{tabular}{c}
 \input{/tmp/profound-render}
-\end{gather*}
+\end{tabular}
 
 \end{document}

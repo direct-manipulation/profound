@@ -7,3 +7,4 @@ tex/*.aux
 tex/*.log
 tex/*.dvi
 tex/*.png
+*.pc

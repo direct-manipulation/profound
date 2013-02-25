@@ -8,7 +8,6 @@ open Batteries
 open Log
 
 open Syntax
-open Syntax_tex
 
 open Traversal
 
