@@ -116,12 +116,7 @@ let maybe_refresh fr fcx f =
     | QU (q, x) -> (x, fun () -> QU (q, Idt.refresh x))
     | _ -> assert false
     end in
-  let test ~dep t =
-    begin match t with
-    | Idx n -> dep = n
-    | App (f, _) -> f = x
-    end in
-  if test_fcx test fcx f
+  if var_occurs x (subst fcx f)
   then { fr with fconn = rx () }
   else fr
 

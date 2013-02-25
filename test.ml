@@ -21,7 +21,9 @@ open Idt
 (*       Log.(log FATAL "Could not read a form from %S" f) ; *)
 (*       failwith "read_form") *)
 
-(* let f0 = read_form "examples/cls-2.p" *)
+let Result.Ok hi = Syntax_io.load_file "examples/linear_drinker.p"
+let (_, f0, _) = Action.render hi
+
 (* let f1 = go_top (make_lnk SRC (descend [0 ; 0] f0)) *)
 (* let f2 = go_top (make_lnk SNK (descend [1 ; 0] f1)) *)
 (* let (fcx0, fcx1, l1, fcx2, l2) = match_links f2 *)
@@ -30,16 +32,16 @@ open Idt
 (* let f5 = cleanup (subst fcx0 f4) *)
 (* let f6 = resolve_mpar f2 *)
 
-let () =
-  Log.(to_stdout () ; loglevel := TRACE)
+(* let () = *)
+(*   Log.(to_stdout () ; loglevel := TRACE) *)
 
-let test0 () =
-  let open Result in
-  Syntax_io.(
-    let fin = "examples/linear_drinker.p" in
-    match load_file fin with
-    | Ok hi -> 
-        save_file fin hi ;
-        load_file fin
-    | res -> res
-  )
+(* let test0 () = *)
+(*   let open Result in *)
+(*   Syntax_io.( *)
+(*     let fin = "examples/linear_drinker.p" in *)
+(*     match load_file fin with *)
+(*     | Ok hi ->  *)
+(*         save_file fin hi ; *)
+(*         load_file fin *)
+(*     | res -> res *)
+(*   ) *)

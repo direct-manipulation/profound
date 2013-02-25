@@ -84,6 +84,8 @@ struct
         stat#flash ~delay:1500 txt
     ) fmt
 
+  exception Cancelled_action
+
   let read_term x cx =
     let dwin = GWindow.dialog
       ~parent:main_win
@@ -120,10 +122,13 @@ struct
     begin match resp with
     | `OK ->
         begin match Syntax_io.term_of_string cx txt with
-        | Ok t -> Some t
-        | _ -> None
+        | Ok t -> t
+        | Bad msg ->
+            flash "Failed to parse %S: %s" txt msg ;
+            raise Cancelled_action
         end
-    | _ -> None
+    | _ ->
+        raise Cancelled_action
     end      
 
   (* key processing *)
@@ -153,18 +158,13 @@ struct
     Action.(GdkKeysyms.(
       let c = true in
       let s = true in
-      let e = true in
       let klist = ref [] in
       let kmap = ref Map.empty in
       let add ?(e = false) ?(c = false) ?(s = false) code ad =
         let key = { code ; c ; s } in
-        if e then klist := ad :: !klist ;
+        if ad.desc <> "" then klist := ad :: !klist ;
         kmap := add_action !kmap key ad
       in
-      add ~c _z      { action = action_undo
-                     ; desc   = "^Z=undo"              } ~e ;
-      add ~c _y      { action = action_redo
-                     ; desc   = "^Y=redo"              } ~e ;
       add _Down      { action = action_descend
                      ; desc   = ""                     } ;
       add _Up        { action = action_ascend
@@ -176,21 +176,31 @@ struct
       add _Right     { action = action_right
                      ; desc   = ""                     } ;
       add _Return    { action = action_mark_source
-                     ; desc   = "Enter=mark"           } ~e ;
+                     ; desc   = "Enter=mark"           } ;
       add _Return    { action = action_unmark_source
-                     ; desc   = "Enter=unmark"         } ~e ;
+                     ; desc   = "Enter=unmark"         } ;
       add _Return    { action = action_complete_link
-                     ; desc   = "Enter=link"           } ~e ;
+                     ; desc   = "Enter=link"           } ;
       add _Escape    { action = action_reset
-                     ; desc   = "Esc=reset"            } ~e ;
+                     ; desc   = "Esc=reset"            } ;
       add _Delete    { action = action_zero
-                     ; desc   = "Del=kill"             } ~e ;
+                     ; desc   = "Del=kill"             } ;
       add ~s _Delete { action = action_weaken
-                     ; desc   = "Shift-Del=weaken"     } ~e ;
+                     ; desc   = "Shift-Del=weaken"     } ;
       add ~s _Return { action = action_contract
-                     ; desc   = "Shift-Enter=contract" } ~e ;
+                     ; desc   = "Shift-Enter=contract" } ;
       add ~s _Return { action = action_witness ~read:read_term
-                     ; desc   = "Shift-Enter=witness"  } ~e ;
+                     ; desc   = "Shift-Enter=witness"  } ;
+      add ~c _z      { action = action_undo
+                     ; desc   = "^Z=undo"              } ;
+      add ~c _Down   { action = action_undo
+                     ; desc   = ""                     } ;
+      add ~c _y      { action = action_redo
+                     ; desc   = "^Y=redo"              } ;
+      add ~c ~s _Z   { action = action_redo
+                     ; desc   = "^Y=redo"              } ;
+      add ~c _Up     { action = action_redo
+                     ; desc   = ""                     } ;
       begin match Param.mode with
       | Imm _ ->
           let action_quit = {
@@ -216,7 +226,7 @@ struct
           } in
           add ~c _s { action = action_save ; desc = "" }
       end ;
-      (!klist, !kmap)
+      (List.rev !klist, !kmap)
     ))
 
   exception Handled
@@ -265,7 +275,12 @@ struct
               end else ()
           end ads ;
           false
-        ) with Handled -> true end
+        ) with
+        | Cancelled_action ->
+            Log.(log DEBUG "Action was cancelled") ;
+            true
+        | Handled -> true
+        end
     | None ->
         Log.(log TRACE "Unknown key %05d [%s]"
                key.code (GdkEvent.Key.string kt)) ;

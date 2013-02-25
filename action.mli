@@ -38,5 +38,5 @@ val action_weaken        : action
 val action_derelict      : action
 val action_contract      : action
 
-val action_witness       :     read:(Idt.t -> Idt.t list -> term option)
+val action_witness       :     read:(Idt.t -> Idt.t list -> term)
                         -> action

@@ -85,7 +85,6 @@ val _Ex   : Idt.t -> form -> form
 val _Bang : form -> form
 val _Qm   : form -> form
 
-val _All_capture  : Idt.t -> form -> form
-val _Ex_capture   : Idt.t -> form -> form
-
 val aeq_forms : form -> form -> bool
+
+val var_occurs : Idt.t -> form -> bool

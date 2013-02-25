@@ -9,6 +9,8 @@ open Batteries
 open Syntax
 open Result
 
+exception Not_first_order
+
 let rec index_term cx = function
   | Idx n -> Idx n
   | App (c, []) ->
@@ -17,7 +19,10 @@ let rec index_term cx = function
       | Some n -> Idx n
       end
   | App (f, ts) ->
-      App (f, List.map (index_term cx) ts)
+      begin match index_find cx f with
+      | None -> App (f, List.map (index_term cx) ts)
+      | Some _ -> raise Not_first_order
+      end
 
 and index_find ?(dep = 0) cx c =
   begin match cx with
@@ -44,7 +49,9 @@ let thing_of_string prs ind cx str =
   try
     let t = prs Syntax_lex.token lb in
     Ok (ind cx t)
-  with Syntax_prs.Error -> Bad "reading term"
+  with
+  | Not_first_order -> Bad "variables cannot have arguments"
+  | Syntax_prs.Error -> Bad "reading term"
 
 let form_of_string cx str = thing_of_string Syntax_prs.one_form index_form cx str
 let term_of_string cx str = thing_of_string Syntax_prs.one_term index_term cx str
@@ -58,6 +65,7 @@ let parse_file f =
     Ok (index_form [] f)
   with 
   | Sys_error _ -> Bad (Printf.sprintf "could not read %S" f)
+  | Not_first_order -> Bad "variables cannot have arguments"
   | Syntax_prs.Error -> Bad "parsing error"
 
 let newer_than f1 f2 =

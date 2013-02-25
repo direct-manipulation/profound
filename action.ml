@@ -59,11 +59,11 @@ let render hi =
   (past, cur, fut)
 
 type action_error =
-  | Parsing_witness
+  | Parsing_witness of string
 exception Action_failure of action_error
 let actfail err = raise (Action_failure err)
 let explain = function
-  | Parsing_witness -> "cannot parse term"
+  | Parsing_witness msg -> "cannot parse term: " ^ msg
 
 let tinker ~fn hi =
   try 
@@ -300,14 +300,10 @@ let action_witness ~read = {
         let (fcx, form) = unsubst snap.form in
         match form with
         | Conn (Qu (Ex, x), [fb]) ->
-            begin match read x (fcx_vars fcx) with
-            | Some t ->
-                let ss = Dot (Shift 0, t)in
-                let form = subst fcx (sub_form ss fb) in
-                { snap with form }
-            | None ->
-                actfail Parsing_witness
-            end
+            let t = read x (fcx_vars fcx) in
+            let ss = Dot (Shift 0, t)in
+            let form = subst fcx (sub_form ss fb) in
+            { snap with form }
         | _ -> assert false
     end
   end }

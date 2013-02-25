@@ -174,27 +174,11 @@ let fresh_for x f =
 let _Q q x f =
   begin match f with
   | Conn (Tens, []) -> _One
-  | f ->
-      begin
-        let x =
-          if test_form (fun ~dep -> function App (f, _) -> f = x | _ -> false) f
-          then Idt.refresh x
-          else x in
-        Conn (Qu (q, x), [f])
-      end
+  | f -> Conn (Qu (q, x), [f])
   end
 
 let _All x f = _Q All x f
 let _Ex x f = _Q Ex x f
-
-let _Q_capture q x f =
-  begin match f with
-  | Conn (Tens, []) -> _One
-  | f -> Conn (Qu (q, x), [f])
-  end
-
-let _All_capture x f = _Q_capture All x f
-let _Ex_capture x f = _Q_capture Ex x f
 
 let _Mark m f = Conn (Mark m, [f])
 
@@ -244,7 +228,9 @@ and sub_form ss f =
   | Atom (s, p, ts) ->
       atom s p (List.map (sub_term ss) ts)
   | Conn (Qu (q, x), [f]) ->
-      _Q q x (sub_form (bump ss) f)
+      let f = sub_form (bump ss) f in
+      let x = maybe_refresh x f in
+      _Q q x f
   | Conn (Qu _, _) -> assert false
   | Conn (c, fs) ->
       conn c (List.map (sub_form ss) fs)
@@ -255,8 +241,10 @@ and sub_form ss f =
 
 and sub_fcx ss fcx =
   begin match Cx.front fcx with
-  | Some ({ fconn = QU _ ; _ } as fr, fcx) ->
+  | Some ({ fconn = QU (q, x) ; _ } as fr, fcx) ->
       let (fcx, ss) = sub_fcx (bump ss) fcx in
+      let x = maybe_refresh_fcx x fcx in 
+      let fr = { fr with fconn = QU (q, x) } in
       (Cx.cons fr fcx, ss)
   | Some (fr, fcx) ->
       let fr = { fr with
@@ -281,6 +269,45 @@ and seq ss tt =
   | _, Dot (tt, t) ->
       Dot (seq ss tt, sub_term ss t)
   end
+
+and maybe_refresh x f =
+  if var_occurs x f then
+    Idt.refresh x
+  else x
+
+and maybe_refresh_fcx x fcx =
+  if var_occurs_fcx x fcx then
+    Idt.refresh x
+  else x
+
+and var_occurs x f =
+  begin match f with
+  | Subst (fcx, f) ->
+      var_occurs_fcx x fcx
+      || var_occurs x f
+  | Conn (Qu (_, y), _) when x = y ->
+      true
+  | Conn (_, fs) ->
+      List.exists (var_occurs x) fs
+  | Atom (_, p, ts) ->
+      p = x
+      || List.exists (test_term (identifier_is_free x)) ts
+  end
+    
+and var_occurs_fcx x fcx =
+  begin match Cx.front fcx with
+  | None -> false
+  | Some ({fconn = QU (_, y) ; _}, _) when x = y ->
+      true
+  | Some ({fconn = _ ; fleft ; fright}, fcx) ->
+      List.exists (var_occurs x) fleft
+      || List.exists (var_occurs x) fright
+      || var_occurs_fcx x fcx
+  end
+
+and identifier_is_free x ~dep = function
+  | App (f, _) -> x = f
+  | _ -> false  
 
 let rec fcx_vars fcx =
   begin match Cx.rear fcx with

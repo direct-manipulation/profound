@@ -11,5 +11,5 @@ clean:
 	${OCB} -clean
 	${RM} version.ml
 
-top:
+top: all
 	OCAMLRUNPARAM=b ocaml

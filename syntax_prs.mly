@@ -53,9 +53,9 @@ form:
 | QM f=form
   %prec PREC_MAX             { Syntax.(_Qm f) }
 | FORALL vs=vars DOT f=form
-  %prec PREC_MIN             { Syntax.(make_quant _All_capture vs f) }
+  %prec PREC_MIN             { Syntax.(make_quant _All vs f) }
 | EXISTS vs=vars DOT f=form
-  %prec PREC_MIN             { Syntax.(make_quant _Ex_capture vs f) }
+  %prec PREC_MIN             { Syntax.(make_quant _Ex vs f) }
 | LPAREN f=form RPAREN       { f }
 
 one_term:
