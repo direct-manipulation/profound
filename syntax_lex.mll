@@ -48,6 +48,9 @@ rule token = parse
 | "\\top"          { P.TOP }
 | "-o"             { P.LTO }
 
+| '='              { P.EQ }
+| "<>" | "\\neq"   { P.NEQ }
+
 | '!'              { P.BANG }
 | '?'              { P.QM }
 

@@ -7,12 +7,12 @@
 \usepackage{xcolor}
 
 \colorlet{src}{blue!20!white}
-\colorlet{dst}{red!20!white}
-\def\csr#1{\bgroup\fboxsep 1pt\fcolorbox{dst!70!black}{dst}{$#1\mathstrut$}\egroup}
+\colorlet{snk}{red!20!white}
+\def\cur#1{\bgroup\fboxsep 1pt\fcolorbox{snk!70!black}{snk}{$#1\mathstrut$}\egroup}
 \def\src#1{\bgroup\fboxsep 1pt\fcolorbox{src!70!black}{src}{$#1\mathstrut$}\egroup}
-\let\dst=\csr
-\long\def\cur#1{\\[2ex]\hbox{\Large$#1$}\\[2ex]}
-\long\def\his#1{\hbox{\scriptsize$#1$}}
+\let\snk=\cur
+\long\def\present#1{\\[2ex]\hbox{\Large$#1$}\\[2ex]}
+\long\def\history#1{\hbox{\scriptsize$#1$}}
 
 \def\TENS{\otimes}
 \def\PAR{\invamp}

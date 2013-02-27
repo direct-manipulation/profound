@@ -19,6 +19,7 @@ type prec_enum =
   | PREC_PLUS
   | PREC_WITH
   | PREC_TENS
+  | PREC_EQ
   | PREC_MAX
 external (!!) : prec_enum -> int = "%identity"
 
@@ -52,6 +53,9 @@ module type SPEC = sig
   val i_var    : idt -> doc
   val i_pred   : idt -> doc
   val i_con    : idt -> doc
+
+  val op_eq    : doc
+  val op_neq   : doc
 
   val op_tens  : doc
   val op_one   : doc
@@ -112,6 +116,17 @@ struct
 
   let rec fmt_form cx f =
     begin match f with
+    | Syntax.Atom (s, p, [t1 ; t2]) when p = Syntax.equals ->
+        begin
+          let t1 = fmt_term cx t1 in
+          let t2 = fmt_term cx t2 in
+          let op = begin
+            match s with
+            | ASSERT -> Spec.op_eq
+            | _ -> Spec.op_neq
+          end in
+          Doc.(Appl (!!PREC_EQ, Infix (op, Left, [Atom t1 ; Atom t2])))
+        end
     | Syntax.Atom (sign, p, ts) ->
         begin
           let p = i_pred p in
@@ -186,6 +201,9 @@ module Src = Fmt (struct
   (* val i_con    : idt -> doc *)
   let i_pred = i_var
   let i_con = i_var
+
+  let op_eq = Group (NOBOX, [String " =" ; space 1])
+  let op_neq = Group (NOBOX, [String " <>" ; space 1])
 
   (* val op_tens  : doc *)
   let op_tens = Group (NOBOX, [String " *" ; space 1])

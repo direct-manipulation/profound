@@ -16,7 +16,7 @@
 %token  EOS PREC_MIN PREC_MAX
 %token  <Idt.t> IDENT
 %token  LPAREN COMMA RPAREN
-%token  LNOT
+%token  LNOT EQ NEQ
 %token  TENSOR PLUS PAR WITH
 %token  LTO LFROM
 %token  ONE ZERO BOT TOP
@@ -40,10 +40,17 @@ term:
 | head=IDENT args=terms      { Syntax.(App (head, args)) }
 | LPAREN t=term RPAREN       { t }
 
+atom_or_eq:
+| h=IDENT ts=terms           { Syntax.(atom ASSERT h ts) }
+| h1=IDENT ts1=terms EQ h2=IDENT ts2=terms
+                             { Syntax.(atom ASSERT equals [App (h1, ts1) ; App (h2, ts2)]) }
+| h1=IDENT ts1=terms NEQ h2=IDENT ts2=terms
+                             { Syntax.(atom REFUTE equals [App (h1, ts1) ; App (h2, ts2)]) }
+
 form:
-| head=IDENT args=terms      { Syntax.(atom ASSERT head args) }
+| f=atom_or_eq               { f }
 | LNOT head=IDENT args=terms { Syntax.(atom REFUTE head args) }
-| f=form TENSOR g=form         { Syntax.(_Tens f g) }
+| f=form TENSOR g=form       { Syntax.(_Tens f g) }
 | ONE                        { Syntax._One }
 | f=form PLUS g=form         { Syntax.(_Plus f g) }
 | ZERO                       { Syntax._Zero }

@@ -4,6 +4,8 @@
 (* See LICENSE for licensing details.                                         *)
 (******************************************************************************)
 
+open Batteries
+
 type box =
     | NOBOX
     | H | V of int | HV of int | HOV of int
