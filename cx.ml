@@ -42,7 +42,7 @@ module D : S = struct
   type 'a cx = 'a Deque.t
 end
 
-(* include F *)
-include D
+include F
+(* include D *)
 
 type 'a t = 'a cx
