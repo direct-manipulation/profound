@@ -288,6 +288,9 @@ let rec resolve_mpar_ fcx1 f1 fcx2 f2 =
       let f1 = sub_form ss f1 in
       let f0 = resolve_mpar_ fcx1 f1 fcx2 f2 in
       unframe fr f0
+  | Some ({conn = Qm ; _} as fr, fcx1), Some ({conn = Qm ; _}, fcx2) ->
+      let f0 = resolve_mpar_ fcx1 f1 fcx2 f2 in
+      unframe fr f0
   | Some ({conn = Qm ; _}, fcx1), _ when bang_free fcx2 ->
       resolve_mpar_ fcx1 f1 fcx2 f2
   | _, Some ({conn = Qm ; _}, fcx2) when bang_free fcx1 ->
