@@ -77,8 +77,8 @@ let set_dpi d =
     Log.(log WARN "Unusual DPI: %d" d) ;
   wash_command := Printf.sprintf
     "( cd tex  && latex '\\nonstopmode\\input wash_form.tex' && dvipng -D %d -T tight -bg transparent -z 9 wash_form.dvi ) %s" d
-    ""
-    (* ">/dev/null 2>&1" *)
+    (* "" *)
+    ">/dev/null 2>&1"
 
 let () = set_dpi 120
 
