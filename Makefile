@@ -1,15 +1,22 @@
 TARGET := profound
 
-OCB := ocamlbuild -use-ocamlfind
+OCB := _build/myocamlbuild -use-ocamlfind
 
-.PHONY: all clean top
+.PHONY: all debug clean top
 
-all:
-	${OCB} ${TARGET}.cma ${TARGET}.native
+all: _build/myocamlbuild
+	${OCB} -no-plugin ${TARGET}.native
 
-clean:
+debug: all
+	${OCB} -no-plugin ${TARGET}.cma
+
+_build/myocamlbuild: myocamlbuild.ml
+	ocamlbuild -just-plugin
+
+clean: _build/myocamlbuild
 	${OCB} -clean
 	${RM} version.ml
 
-top: all
+top:
+	${MAKE} debug >/dev/null 2>&1
 	OCAMLRUNPARAM=b ocaml
