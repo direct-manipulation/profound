@@ -15,6 +15,8 @@ open Batteries
 open Syntax
 open Result
 
+module Src = Syntax_fmt.Src
+
 type mmode =
   | Unmarked
   | Marked
@@ -184,7 +186,7 @@ let action_mark_source = {
     tinker hi ~fn:begin
       fun snap ->
         let (fcx, f) = unsubst snap.form in
-        let _ = (try mark SRC f with Cannot_mark -> assert false) in
+        Log.(log DEBUG "Marking: %s" (Src.form_to_string (fcx_vars fcx) f)) ;
         let form = subst fcx (mark SRC f) in
         let mmode = Marked in
         { form ; mmode }
@@ -196,7 +198,7 @@ let action_unmark_source = {
     hi.work.mmode = Marked && begin
       let (_, f) = unsubst hi.work.form in
       match f with
-      | Conn (Mark SRC, _) -> true
+      | Mark (SRC, _) -> true
       | _ -> false
     end
   end ;
@@ -275,10 +277,10 @@ let action_contract = {
         let (fcx, form) = unsubst snap.form in
         let (fcx, fr) =
           begin match Cx.rear fcx with
-          | Some (fcx, ({fconn = PAR ; fright ; _} as fr)) ->
-              (fcx, {fr with fright = form :: fright})
+          | Some (fcx, ({conn = Par ; right ; _} as fr)) ->
+              (fcx, {fr with right = form :: right})
           | _ ->
-              (fcx, {fconn = PAR ; fleft = [] ; fright = [form]})
+              (fcx, {conn = Par ; left = [] ; right = [form]})
           end in
         let fcx = Cx.snoc fcx fr in
         let form = subst fcx form in

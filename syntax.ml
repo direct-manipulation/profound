@@ -20,13 +20,14 @@ type form =
   | Atom  of sign * idt * term list
   | Conn  of conn * form list
   | Subst of fcx * form
+  | Mark  of mkind * form
 
 and fcx = frame Cx.t
 
 and frame = {
-  fconn  : fconn ;
-  fleft  : form list ;
-  fright : form list ;
+  conn  : conn ;
+  left  : form list ;
+  right : form list ;
 }
 
 and quant = All | Ex
@@ -35,12 +36,6 @@ and conn =
   | Tens | Plus | Par | With | Lto
   | Qu of quant * idt
   | Bang | Qm
-  | Mark of mkind
-
-and fconn = 
-  | TENS | PLUS | PAR | WITH | LTO
-  | QU of quant * idt
-  | BANG | QM
 
 and mkind =
   | ARG | SRC | SNK
@@ -62,6 +57,8 @@ and test_form_ dep test f =
       List.exists (test_form_ (dep + 1) test) fs
   | Conn (c, fs) ->
       List.exists (test_form_ dep test) fs
+  | Mark (_, f) ->
+      test_form_ dep test f
   | Subst (fcx, f) ->
       test_fcx_ dep test fcx f
   end
@@ -69,11 +66,11 @@ and test_form_ dep test f =
 and test_fcx_ dep test fcx f =
   begin match Cx.front fcx with
   | None -> test_form_ dep test f
-  | Some ({fconn = QU _ ; _}, fcx) ->
+  | Some ({conn = Qu _ ; _}, fcx) ->
       test_fcx_ (dep + 1) test fcx f
   | Some (fr, fcx) ->
-      List.exists (test_form_ dep test) fr.fleft
-      || List.exists (test_form_ dep test) fr.fright
+      List.exists (test_form_ dep test) fr.left
+      || List.exists (test_form_ dep test) fr.right
       || test_fcx_ dep test fcx f
   end
 
@@ -195,26 +192,30 @@ let _Ex x f = _Q Ex x f
 
 exception Cannot_mark
 
-let rec has_mark f =
+let rec has_mark ?m f =
   begin match f with
-  | Conn (Mark _, _) -> true
-  | Conn (q, fs) -> List.exists has_mark fs
+  | Mark (n, f) ->
+      begin match m with
+      | Some n' -> n = n' || has_mark ?m f
+      | None -> true
+      end
+  | Conn (q, fs) -> List.exists (has_mark ?m) fs
   | Atom _ -> false
-  | Subst (fcx, f) -> has_mark_fcx fcx || has_mark f
+  | Subst (fcx, f) -> has_mark_fcx ?m fcx || has_mark ?m f
   end
 
-and has_mark_fcx fcx =
+and has_mark_fcx ?m fcx =
   begin match Cx.front fcx with
-  | Some ({fleft ; fright ; _}, fcx) ->
-      List.exists has_mark fleft
-      || List.exists has_mark fright
-      || has_mark_fcx fcx
+  | Some ({left ; right ; _}, fcx) ->
+      List.exists (has_mark ?m) left
+      || List.exists (has_mark ?m) right
+      || has_mark_fcx ?m fcx
   | None -> false
   end
 
 let mark m f = 
-  if has_mark f then raise Cannot_mark ;
-  Conn (Mark m, [f])
+  if has_mark ~m f then raise Cannot_mark ;
+  Mark (m, f)
 
 let mk_un fn fs =
   begin match fs with
@@ -232,12 +233,11 @@ let conn c =
   | Bang      -> mk_un _Bang
   | Qm        -> mk_un _Qm
   | Qu (q, x) -> mk_un (_Q q x)
-  | Mark m    -> (fun fs -> Conn (c, fs))
   end
 
 let unmark f =
   begin match f with
-  | Conn (Mark _, [f]) -> f
+  | Mark (_, f) -> f
   | _ -> f
   end
 
@@ -275,6 +275,8 @@ and sub_form ss f =
   | Conn (Qu _, _) -> assert false
   | Conn (c, fs) ->
       conn c (List.map (sub_form ss) fs)
+  | Mark (m, f) ->
+      Mark (m, sub_form ss f)
   | Subst (fcx, f) ->
       let (fcx, ss) = sub_fcx ss fcx in
       subst fcx (sub_form ss f)
@@ -282,15 +284,15 @@ and sub_form ss f =
 
 and sub_fcx ss fcx =
   begin match Cx.front fcx with
-  | Some ({ fconn = QU (q, x) ; _ } as fr, fcx) ->
+  | Some ({ conn = Qu (q, x) ; _ } as fr, fcx) ->
       let (fcx, ss) = sub_fcx (bump ss) fcx in
       let x = maybe_refresh_fcx x fcx in 
-      let fr = { fr with fconn = QU (q, x) } in
+      let fr = { fr with conn = Qu (q, x) } in
       (Cx.cons fr fcx, ss)
   | Some (fr, fcx) ->
       let fr = { fr with
-        fleft = List.map (sub_form ss) fr.fleft ;
-        fright = List.map (sub_form ss) fr.fright ;
+        left = List.map (sub_form ss) fr.left ;
+        right = List.map (sub_form ss) fr.right ;
       } in
       let (fcx, ss) = sub_fcx ss fcx in
       (Cx.cons fr fcx, ss)
@@ -330,6 +332,8 @@ and var_occurs x f =
       true
   | Conn (_, fs) ->
       List.exists (var_occurs x) fs
+  | Mark (_, f) ->
+      var_occurs x f
   | Atom (_, p, ts) ->
       p = x
       || List.exists (test_term (identifier_is_free x)) ts
@@ -338,11 +342,11 @@ and var_occurs x f =
 and var_occurs_fcx x fcx =
   begin match Cx.front fcx with
   | None -> false
-  | Some ({fconn = QU (_, y) ; _}, _) when x = y ->
+  | Some ({conn = Qu (_, y) ; _}, _) when x = y ->
       true
-  | Some ({fconn = _ ; fleft ; fright}, fcx) ->
-      List.exists (var_occurs x) fleft
-      || List.exists (var_occurs x) fright
+  | Some ({conn = _ ; left ; right}, fcx) ->
+      List.exists (var_occurs x) left
+      || List.exists (var_occurs x) right
       || var_occurs_fcx x fcx
   end
 
@@ -352,30 +356,13 @@ and identifier_is_free x ~dep = function
 
 let rec fcx_vars fcx =
   begin match Cx.rear fcx with
-  | Some (fcx, {fconn = QU (_, x) ; _}) ->
+  | Some (fcx, {conn = Qu (_, x) ; _}) ->
       x :: fcx_vars fcx
   | Some (fcx, _) ->
       fcx_vars fcx
   | None ->
       []
   end
-
-let fconn_of_conn = function
-  | Tens -> TENS | Plus -> PLUS
-  | Par -> PAR | With -> WITH
-  | Lto -> LTO
-  | Qu (q, x) -> QU (q, x)
-  | Bang -> BANG | Qm -> QM
-  | _ -> invalid_arg "fconn_of_conn"
-
-let conn_of_fconn = function
-  | TENS -> Tens | PLUS -> Plus
-  | PAR -> Par | WITH -> With
-  | LTO -> Lto
-  | QU (q, x) -> Qu (q, x)
-  | BANG -> Bang | QM -> Qm
-
-let fconn fc = conn (conn_of_fconn fc)
 
 let subst1 fr f = subst (Cx.of_list [fr]) f
 
@@ -386,7 +373,7 @@ let rec unsubst f =
   end
 
 let unframe fr f =
-  fconn fr.fconn (List.rev_append fr.fleft (f :: fr.fright))
+  conn fr.conn (List.rev_append fr.left (f :: fr.right))
 
 let head1 f =
   match f with

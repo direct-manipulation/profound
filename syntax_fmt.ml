@@ -151,7 +151,7 @@ struct
           i_var x ; String "." ; space 1 ;
         ])) in
         Doc.(Appl (!!PREC_MIN, Prefix (q, fmt_form (x :: cx) f)))
-    | Conn (Mark m, [f]) ->
+    | Mark (m, f) ->
         let (ld, rd) =
           begin match m with
           | SRC -> (src_l, src_r)
@@ -159,10 +159,10 @@ struct
           | ARG -> (cur_l, cur_r)
           end in
         Doc.(Wrap (Opaque, ld, fmt_form cx f, rd))
-    | Conn ((Bang | Qm | Qu _ | Mark _), _) ->
+    | Conn ((Bang | Qm | Qu _), _) ->
         fmtfail Must_be_unary
     | Subst (fcx, f) ->
-        let f = conn (Mark ARG) [f] in
+        let f = mark ARG f in
         let f = go_top (subst fcx f) in
         fmt_form cx f
     end

@@ -42,6 +42,8 @@ let rec index_form cx f =
       conn q fs
   | Conn (c, fs) ->
       conn c (List.map (index_form cx) fs)
+  | Mark (m, f) ->
+      mark m (index_form cx f)
   | Subst _ -> assert false
   end
 

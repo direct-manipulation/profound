@@ -38,16 +38,16 @@ let go_down n f =
   let (fcx, f) = unsubst f in
   let (fr, f) =
     begin match f with
-    | Conn (Mark _, _)
+    | Mark _
     | Atom _ ->
         travfail At_leaf
     | Conn (c, fs) ->
         let (lfs, f, rfs) = split3 n fs in
         assert (fs = List.rev_append lfs (f :: rfs)) ;
         let fr = {
-          fconn = fconn_of_conn c ;
-          fleft = lfs ;
-          fright = rfs ;
+          conn = c ;
+          left = lfs ;
+          right = rfs ;
         } in
         (fr, f)
     | Subst _ -> assert false
@@ -73,11 +73,11 @@ let go_left f =
   let (fcx, f) = unsubst f in
   begin match Cx.rear fcx with
   | Some (fcx, fr) ->
-      begin match fr.fleft with
+      begin match fr.left with
       | lf :: lfs ->
           let fr = { fr with
-            fleft = lfs ;
-            fright = f :: fr.fright ;
+            left = lfs ;
+            right = f :: fr.right ;
           } in
           let fcx = Cx.snoc fcx fr in
           subst fcx lf
@@ -90,11 +90,11 @@ let go_right f =
   let (fcx, f) = unsubst f in
   begin match Cx.rear fcx with
   | Some (fcx, fr) ->
-      begin match fr.fright with
+      begin match fr.right with
       | rf :: rfs ->
           let fr = { fr with
-            fright = rfs ;
-            fleft = f :: fr.fleft ;
+            right = rfs ;
+            left = f :: fr.left ;
           } in
           let fcx = Cx.snoc fcx fr in
           subst fcx rf
@@ -116,8 +116,7 @@ let rec descend (tr : trail) f =
 let rec cleanup f =
   begin match head1 f with
   | Atom _ as f -> f
-  | Conn (Mark _, [f]) ->
-      cleanup f
+  | Mark (_, f) -> cleanup f
   | Conn (c, fs) ->
       let fs = List.map cleanup fs in
       conn c fs

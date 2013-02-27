@@ -15,16 +15,17 @@ val equals : Idt.t
 type sign = ASSERT | REFUTE
 
 type form = private
-  | Atom of sign * Idt.t * term list
-  | Conn of conn * form list
+  | Atom  of sign * Idt.t * term list
+  | Conn  of conn * form list
   | Subst of fcx * form
+  | Mark  of mkind * form
 
 and fcx = frame Cx.t
 
 and frame = {
-  fconn : fconn;
-  fleft : form list;
-  fright : form list;
+  conn : conn ;
+  left : form list;
+  right : form list;
 }
 
 and quant = All | Ex
@@ -33,12 +34,6 @@ and conn =
   | Tens | Plus | Par | With | Lto
   | Qu of quant * Idt.t
   | Bang | Qm
-  | Mark of mkind
-
-and fconn =
-  | TENS | PLUS | PAR | WITH | LTO
-  | QU of quant * Idt.t
-  | BANG | QM
 
 and mkind = ARG | SRC | SNK
 
@@ -49,10 +44,6 @@ val sub_term : sub -> term -> term
 val sub_form : sub -> form -> form
 val sub_fcx : sub -> fcx -> fcx * sub
 val seq : sub -> sub -> sub
-
-val fconn_of_conn : conn -> fconn
-val conn_of_fconn : fconn -> conn
-val fconn : fconn -> form list -> form
 
 val unsubst : form -> fcx * form
 val unframe : frame -> form -> form
@@ -88,7 +79,7 @@ val _Qm   : form -> form
 
 exception Cannot_mark
 val mark   : mkind -> form -> form
-val has_mark : form -> bool
+val has_mark : ?m:mkind -> form -> bool
 val unmark : form -> form
 
 val aeq_forms : form -> form -> bool

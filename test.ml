@@ -6,14 +6,9 @@ open Rules
 
 open Idt
 
-let pretty_form ?tr str =
+let form str =
   begin match Syntax_io.form_of_string [] str with
-  | Ok f ->
-      let f =
-        begin match tr with
-        | Some tr -> descend tr f
-        | None -> f
-        end in
-      Syntax_fmt.Src.form_to_string [] f
+  | Ok f -> f
   | Bad msg -> failwith msg
   end
+

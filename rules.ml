@@ -25,7 +25,7 @@ let explain = function
 
 let is_qm fcx f =
   begin match Cx.front fcx with
-  | Some ({fconn = QM ; _}, _) -> true
+  | Some ({conn = Qm ; _}, _) -> true
   | Some _ -> false
   | None ->
       begin match f with
@@ -37,7 +37,7 @@ let is_qm fcx f =
 let rec bang_free fcx =
   begin match Cx.front fcx with
   | None -> true
-  | Some ({fconn = BANG ; _}, _) -> false
+  | Some ({conn = Bang ; _}, _) -> false
   | Some (_, fcx) -> bang_free fcx
   end
 
@@ -66,33 +66,32 @@ let main_arg f =
 
 let is_src f =
   begin match f with
-  | Conn (Mark SRC, _) -> true
-  | Conn (Mark SNK, _) -> false
-  | _ -> assert false
+  | Mark (SRC, _) -> true
+  | _ -> false
   end
 
 let maybe_refresh fr fcx f =
   let (x, rx) =
-    begin match fr.fconn with
-    | QU (q, x) -> (x, fun () -> QU (q, Idt.refresh x))
+    begin match fr.conn with
+    | Qu (q, x) -> (x, fun () -> Qu (q, Idt.refresh x))
     | _ -> assert false
     end in
   if var_occurs x (subst fcx f)
-  then { fr with fconn = rx () }
+  then { fr with conn = rx () }
   else fr
 
 let rec find_marked f =
   begin match f with
   | Atom _ -> None
   | Subst _ -> assert false
-  | Conn (Mark _, _) -> Some (Cx.empty, f)
+  | Mark _ -> Some (Cx.empty, f)
   | Conn (c, fs) ->
       begin match find_marked_arg [] fs with
       | Some (lfs, fcx, f, rfs) ->
           let fr = {
-            fconn = fconn_of_conn c ;
-            fleft = lfs ;
-            fright = rfs ;
+            conn = c ;
+            left = lfs ;
+            right = rfs ;
           } in
           let fcx = Cx.cons fr fcx in
           Some (fcx, f)
@@ -119,7 +118,7 @@ let find_frame_mate fr0 fcx1 f1 =
     | lf :: lfs ->
         begin match find_marked lf with
         | Some (fcx2, f2) ->
-            Some (lfs, fcx2, f2, rfs, fcx1, f1, fr0.fright)
+            Some (lfs, fcx2, f2, rfs, fcx1, f1, fr0.right)
         | None ->
             scan_left lfs (lf :: rfs)
         end
@@ -130,14 +129,14 @@ let find_frame_mate fr0 fcx1 f1 =
     | rf :: rfs ->
         begin match find_marked rf with
         | Some (fcx2, f2) ->
-            Some (fr0.fleft, fcx1, f1, lfs, fcx2, f2, rfs)
+            Some (fr0.left, fcx1, f1, lfs, fcx2, f2, rfs)
         | None ->
             scan_right (rf :: lfs) rfs
         end
     end
   in
-  begin match scan_left fr0.fleft [] with
-  | None -> scan_right [] fr0.fright
+  begin match scan_left fr0.left [] with
+  | None -> scan_right [] fr0.right
   | res -> res
   end
 
@@ -147,8 +146,8 @@ let rec find_fcx_mate fcx0 fcx1 f1 =
       begin match find_frame_mate fr0 fcx1 f1 with
       | Some (lfs, fcx1, f1, mfs, fcx2, f2, rfs) ->
           let fr0 = { fr0 with
-            fleft = lfs ;
-            fright = List.rev_append mfs rfs ;
+            left = lfs ;
+            right = List.rev_append mfs rfs ;
           } in
           let fcx0 = Cx.snoc fcx0 fr0 in
           Some (fcx0, fcx1, f1, fcx2, f2)
@@ -178,7 +177,7 @@ let explain_link_error = function
 
 let rec lowest_qm f r =
   begin match Cx.rear f with
-  | Some (f, ({fconn = QM ; _} as fr)) -> (f, Cx.cons fr r)
+  | Some (f, ({conn = Qm ; _} as fr)) -> (f, Cx.cons fr r)
   | Some (f, fr) -> lowest_qm f (Cx.cons fr r)
   | None -> linkfail Bad_ancestor
   end
@@ -186,8 +185,8 @@ let rec lowest_qm f r =
 let unravel gcx fcx1 f1 fcx2 f2 =
   begin match Cx.rear gcx with
   | Some (gcx, fr) ->
-      let fr1 = {fr with fright = subst fcx2 (unmark f2) :: fr.fright} in
-      let fr2 = {fr with fleft = subst fcx1 (unmark f1) :: fr.fleft} in
+      let fr1 = {fr with right = subst fcx2 (unmark f2) :: fr.right} in
+      let fr2 = {fr with left = subst fcx1 (unmark f1) :: fr.left} in
       let fcx1 = Cx.cons fr1 fcx1 in
       let fcx2 = Cx.cons fr2 fcx2 in
       (Cx.append gcx fcx1, Cx.append gcx fcx2)
@@ -196,12 +195,12 @@ let unravel gcx fcx1 f1 fcx2 f2 =
 
 let maybe_contract fcx0 fcx1 f1 fcx2 f2 =
   begin match Cx.rear fcx0 with
-  | Some (_, {fconn = PAR ; _}) ->
+  | Some (_, {conn = Par ; _}) ->
       (fcx0, fcx1, f1, fcx2, f2)
   | _ ->
       Log.(log DEBUG "Had to contract") ;
       let (fcx0, gcx) = lowest_qm fcx0 Cx.empty in
-      let fcx0 = Cx.snoc fcx0 { fconn = PAR ; fleft = [] ; fright = [] } in
+      let fcx0 = Cx.snoc fcx0 { conn = Par ; left = [] ; right = [] } in
       let (fcx1, fcx2) = unravel gcx fcx1 f1 fcx2 f2 in
       (fcx0, fcx1, f1, fcx2, f2)
   end
@@ -225,12 +224,12 @@ let match_links f =
           (* Log.(log DEBUG " f2 = %s" (Syntax_tex.form_to_string (fcx_vars fcx0) (subst fcx2 f2))) ; *)
           (* Log.(log DEBUG "match_links POST end") ; *)
           (* begin match Cx.rear fcx0 with *)
-          (* | Some (_, {fconn = PAR ; _}) -> () *)
+          (* | Some (_, {conn = PAR ; _}) -> () *)
           (* | _ -> linkfail Invalid_marks *)
           (* end ; *)
           begin match f1, f2 with
-          | Conn (Mark SRC, _), Conn (Mark SNK, _)
-          | Conn (Mark SNK, _), Conn (Mark SRC, _) -> ()
+          | Mark (SRC, _), Mark (SNK, _)
+          | Mark (SNK, _), Mark (SRC, _) -> ()
           | _ -> linkfail Invalid_marks
           end ;
           res
@@ -253,59 +252,59 @@ let rec resolve_mpar_ fcx1 f1 fcx2 f2 =
           conn Par [f1 ; f2]
       end
   (* negative cases *)
-  | Some ({fconn = PAR ; _} as fr, fcx1), _ ->
+  | Some ({conn = Par ; _} as fr, fcx1), _ ->
       let f0 = resolve_mpar_ fcx1 f1 fcx2 f2 in
       unframe fr f0
-  | _, Some ({fconn = PAR ; _} as fr, fcx2) ->
+  | _, Some ({conn = Par ; _} as fr, fcx2) ->
       let f0 = resolve_mpar_ fcx1 f1 fcx2 f2 in
       unframe fr f0
-  | Some ({fconn = WITH ; _} as fr, fcx1), _ ->
+  | Some ({conn = With ; _} as fr, fcx1), _ ->
       let f0 = resolve_mpar_ fcx1 f1 fcx2 f2 in
       let u2 = go_top (subst fcx2 (unmark f2)) in
       let dist f = conn Par [f ; u2] in
       let fr = { fr with
-        fleft = List.map dist fr.fleft ;
-        fright = List.map dist fr.fright ;
+        left = List.map dist fr.left ;
+        right = List.map dist fr.right ;
       } in
       unframe fr f0
-  | _, Some ({fconn = WITH ; _} as fr, fcx2) ->
+  | _, Some ({conn = With ; _} as fr, fcx2) ->
       let f0 = resolve_mpar_ fcx1 f1 fcx2 f2 in
       let u1 = go_top (subst fcx1 (unmark f1)) in
       let dist f = conn Par [u1 ; f] in
       let fr = { fr with
-        fleft = List.map dist fr.fleft ;
-        fright = List.map dist fr.fright ;
+        left = List.map dist fr.left ;
+        right = List.map dist fr.right ;
       } in
       unframe fr f0
-  | Some ({fconn = QU (All, x) ; _} as fr, fcx1), _ ->
+  | Some ({conn = Qu (All, x) ; _} as fr, fcx1), _ ->
       let fr = maybe_refresh fr fcx2 f2 in
       let (fcx2, ss) = sub_fcx (Shift 1) fcx2 in
       let f2 = sub_form ss f2 in
       let f0 = resolve_mpar_ fcx1 f1 fcx2 f2 in
       unframe fr f0
-  | _, Some ({fconn = QU (All, x) ; _} as fr, fcx2) ->
+  | _, Some ({conn = Qu (All, x) ; _} as fr, fcx2) ->
       let fr = maybe_refresh fr fcx1 f1 in
       let (fcx1, ss) = sub_fcx (Shift 1) fcx1 in
       let f1 = sub_form ss f1 in
       let f0 = resolve_mpar_ fcx1 f1 fcx2 f2 in
       unframe fr f0
-  | Some ({fconn = QM ; _}, fcx1), _ when bang_free fcx2 ->
+  | Some ({conn = Qm ; _}, fcx1), _ when bang_free fcx2 ->
       resolve_mpar_ fcx1 f1 fcx2 f2
-  | _, Some ({fconn = QM ; _}, fcx2) when bang_free fcx1 ->
+  | _, Some ({conn = Qm ; _}, fcx2) when bang_free fcx1 ->
       resolve_mpar_ fcx1 f1 fcx2 f2
   (* positive cases *)
-  | Some ({fconn = TENS ; _} as fr, fcx1), _ ->
+  | Some ({conn = Tens ; _} as fr, fcx1), _ ->
       let f0 = resolve_mpar_ fcx1 f1 fcx2 f2 in
       unframe fr f0
-  | _, Some ({fconn = TENS ; _} as fr, fcx2) ->
+  | _, Some ({conn = Tens ; _} as fr, fcx2) ->
       let f0 = resolve_mpar_ fcx1 f1 fcx2 f2 in
       unframe fr f0
-  | Some ({fconn = PLUS ; _}, fcx1), _ ->
+  | Some ({conn = Plus ; _}, fcx1), _ ->
       resolve_mpar_ fcx1 f1 fcx2 f2
-  | _, Some ({fconn = PLUS ; _}, fcx2) ->
+  | _, Some ({conn = Plus ; _}, fcx2) ->
       resolve_mpar_ fcx1 f1 fcx2 f2
-  | Some ({fconn = QU (Ex, x1) ; _} as fr1, fcx1d),
-    Some ({fconn = QU (Ex, x2) ; _} as fr2, fcx2d) ->
+  | Some ({conn = Qu (Ex, x1) ; _} as fr1, fcx1d),
+    Some ({conn = Qu (Ex, x2) ; _} as fr2, fcx2d) ->
       if is_src f1 then begin
         let fr2 = maybe_refresh fr2 fcx1 f1 in
         let (fcx1, ss) = sub_fcx (Shift 1) fcx1 in
@@ -319,33 +318,33 @@ let rec resolve_mpar_ fcx1 f1 fcx2 f2 =
         let f0 = resolve_mpar_ fcx1d f1 fcx2 f2 in
         unframe fr1 f0
       end
-  | Some ({fconn = QU (Ex, x) ; _} as fr, fcx1), _ ->
+  | Some ({conn = Qu (Ex, x) ; _} as fr, fcx1), _ ->
       let fr = maybe_refresh fr fcx2 f2 in
       let (fcx2, ss) = sub_fcx (Shift 1) fcx2 in
       let f2 = sub_form ss f2 in
       let f0 = resolve_mpar_ fcx1 f1 fcx2 f2 in
       unframe fr f0
-  | _, Some ({fconn = QU (Ex, x) ; _} as fr, fcx2) ->
+  | _, Some ({conn = Qu (Ex, x) ; _} as fr, fcx2) ->
       let fr = maybe_refresh fr fcx1 f1 in
       let (fcx1, ss) = sub_fcx (Shift 1) fcx1 in
       let f1 = sub_form ss f1 in
       let f0 = resolve_mpar_ fcx1 f1 fcx2 f2 in
       unframe fr f0
-  | Some ({fconn = BANG ; _} as fr, fcx1), _ ->
+  | Some ({conn = Bang ; _} as fr, fcx1), _ ->
       if not (is_qm fcx2 f2) then rulefail Promotion ;
       let f0 = resolve_mpar_ fcx1 f1 fcx2 f2 in
       unframe fr f0
-  | _, Some ({fconn = BANG ; _} as fr, fcx2) ->
+  | _, Some ({conn = Bang ; _} as fr, fcx2) ->
       if not (is_qm fcx1 f1) then rulefail Promotion ;
       let f0 = resolve_mpar_ fcx1 f1 fcx2 f2 in
       unframe fr f0
   (* The following are supposedly unreachable states *)
   (* They are just present to silence the exhaustiveness checker *)
-  | Some ({fconn = QM ; _}, _), _
-  | _, Some ({fconn = QM ; _}, _) ->
+  | Some ({conn = Qm ; _}, _), _
+  | _, Some ({conn = Qm ; _}, _) ->
       rulefail Stuck
-  | _, Some ({fconn = LTO ; _}, _)
-  | Some ({fconn = LTO ; _}, _), _ ->
+  | _, Some ({conn = Lto ; _}, _)
+  | Some ({conn = Lto ; _}, _), _ ->
       rulefail Stuck
   end
 

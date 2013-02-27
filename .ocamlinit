@@ -9,3 +9,5 @@ Sys.interactive := false ;;
 #directory "_build" ;;
 Sys.interactive := __sys_int ;;
 #load "profound.cma" ;;
+let pp_form ff f = Syntax_fmt.Src.pp_form ~cx:[] ff f ;;
+#install_printer pp_form ;;

@@ -68,11 +68,11 @@ let rec pp_form cx buf f =
           add_string buf "\\lnot " ;
           pp_term ~kon:false cx buf (App (p, ts)) ;
       end
-  | Conn (Mark ARG, [f]) ->
+  | Mark (ARG, f) ->
       add_string buf "\\csr{" ;
       pp_form cx buf f ;
       add_string buf "}"
-  | Conn (Mark (SRC | SNK as dir), [f]) ->
+  | Mark ((SRC | SNK as dir), f) ->
       bprintf buf "\\%s{"
         (match dir with SRC -> "src" | _ -> "dst") ;
       pp_form cx buf f ;
@@ -93,14 +93,14 @@ let rec pp_form cx buf f =
           pp_check_bracket ~p cx buf g
       end gs
   | Subst (fcx, f) ->
-      let f = conn (Mark ARG) [f] in
+      let f = mark ARG f in
       let f = go_top (subst fcx f) in
       pp_form cx buf f
   end
 
 and extend cx fcx =
   begin match Deque.front fcx with
-  | Some ({ fconn = QU (_, x) ; _}, fcx) ->
+  | Some ({ conn = Qu (_, x) ; _}, fcx) ->
       extend (x :: cx) fcx
   | Some (_, fcx) ->
       extend cx fcx
@@ -109,7 +109,7 @@ and extend cx fcx =
 
 and needs_bracket p f =
   begin match head1 f with
-  | Conn (Mark _, _)
+  | Mark _
   | Atom _
   | Conn ((Tens | Plus | With | Par), []) -> false
   | Conn (q, _) ->
@@ -120,7 +120,7 @@ and needs_bracket p f =
 
 and pp_check_bracket ~p cx buf f =
   begin match head1 f with
-  | Conn (Mark _, [fb]) ->
+  | Mark (_, fb) ->
       if needs_bracket p fb
       then pp_bracket cx buf f
       else pp_form cx buf f
@@ -174,7 +174,6 @@ and prec = function
   | Lto -> 1
   | Qu _ -> 0
   | Bang | Qm -> 6
-  | Mark _ -> max_int
 
 let wash_command = ref ""
 
@@ -190,7 +189,7 @@ let () = set_dpi 120
 
 let pp_top cx buf f =
   let (fcx, f) = unsubst f in
-  let f = conn (Mark ARG) [f] in
+  let f = mark ARG f in
   let f = go_top (subst fcx f) in
   pp_form cx buf f
 
