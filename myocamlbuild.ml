@@ -1,11 +1,22 @@
+(******************************************************************************)
+(* Author: Kaustuv Chaudhuri <kaustuv.chaudhuri@inria.fr>                     *)
+(* Copyright (C) 2013  INRIA                                                  *)
+(* See LICENSE for licensing details.                                         *)
+(******************************************************************************)
+
 open Ocamlbuild_plugin ;;
 
 let major = 0
 let minor = 3
-let patch = 1                           (* must be at least 1 -- this is enforced *)
+let patch = 2
 let tag   = "itp13"
 
-let patch = max patch 1
+(*********************************************************************************)
+
+(* sanity checks on versions *)
+let major = max 0 major
+let minor = max 1 minor
+let patch = max 1 patch
 
 let built =
   let open Unix in

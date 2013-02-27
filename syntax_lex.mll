@@ -29,6 +29,8 @@ rule token = parse
 | space            { token lexbuf }
 | newline          { newline lexbuf ; token lexbuf }
 
+| "o-"             { P.LFROM }
+
 | ident            { P.IDENT (Idt.intern (Lexing.lexeme lexbuf)) }
 
 | "~" | "\\lnot"   { P.LNOT }
@@ -44,6 +46,7 @@ rule token = parse
 | "&" | "\\with"   { P.WITH }
 | "#T" | "#t"
 | "\\top"          { P.TOP }
+| "-o"             { P.LTO }
 
 | '!'              { P.BANG }
 | '?'              { P.QM }

@@ -30,13 +30,13 @@ and frame = {
 and quant = All | Ex
 
 and conn =
-  | Tens | Plus | Par | With
+  | Tens | Plus | Par | With | Lto
   | Qu of quant * Idt.t
   | Bang | Qm
   | Mark of mkind
 
 and fconn =
-  | TENS | PLUS | PAR | WITH
+  | TENS | PLUS | PAR | WITH | LTO
   | QU of quant * Idt.t
   | BANG | QM
 
@@ -80,6 +80,7 @@ val _Par  : form -> form -> form
 val _Bot  : form
 val _With : form -> form -> form
 val _Top  : form
+val _Lto  : form -> form -> form
 val _All  : Idt.t -> form -> form
 val _Ex   : Idt.t -> form -> form
 val _Bang : form -> form

@@ -171,6 +171,7 @@ and prec = function
   | Plus -> 1 (* 2 *)
   | With -> 1 (* 3 *)
   | Tens -> 1 (* 4 *)
+  | Lto -> 1
   | Qu _ -> 0
   | Bang | Qm -> 6
   | Mark _ -> max_int

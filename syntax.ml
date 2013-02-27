@@ -32,13 +32,13 @@ and frame = {
 and quant = All | Ex
 
 and conn =
-  | Tens | Plus | Par | With
+  | Tens | Plus | Par | With | Lto
   | Qu of quant * idt
   | Bang | Qm
   | Mark of mkind
 
 and fconn = 
-  | TENS | PLUS | PAR | WITH
+  | TENS | PLUS | PAR | WITH | LTO
   | QU of quant * idt
   | BANG | QM
 
@@ -142,6 +142,19 @@ and _With_spec f g =
   | _ -> raise No_spec
   end
 
+let _Lto f g =
+  begin match f, g with
+  | Conn (Tens, []), _ -> g
+  | _ -> Conn (Lto, [f ; g])
+  end
+
+let rec mk_lto fs =
+  begin match fs with
+  | [] -> _Bot
+  | [f] -> f
+  | f :: gs -> _Lto f (mk_lto gs)
+  end
+
 let _Bang f =
   begin match f with
   | Conn (Tens, [])
@@ -215,6 +228,7 @@ let conn c =
   | Plus      -> List.fold_left _Plus _Zero
   | Par       -> List.fold_left _Par  _Bot
   | With      -> List.fold_left _With _Top
+  | Lto       -> mk_lto
   | Bang      -> mk_un _Bang
   | Qm        -> mk_un _Qm
   | Qu (q, x) -> mk_un (_Q q x)
@@ -349,6 +363,7 @@ let rec fcx_vars fcx =
 let fconn_of_conn = function
   | Tens -> TENS | Plus -> PLUS
   | Par -> PAR | With -> WITH
+  | Lto -> LTO
   | Qu (q, x) -> QU (q, x)
   | Bang -> BANG | Qm -> QM
   | _ -> invalid_arg "fconn_of_conn"
@@ -356,6 +371,7 @@ let fconn_of_conn = function
 let conn_of_fconn = function
   | TENS -> Tens | PLUS -> Plus
   | PAR -> Par | WITH -> With
+  | LTO -> Lto
   | QU (q, x) -> Qu (q, x)
   | BANG -> Bang | QM -> Qm
 

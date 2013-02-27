@@ -344,6 +344,9 @@ let rec resolve_mpar_ fcx1 f1 fcx2 f2 =
   | Some ({fconn = QM ; _}, _), _
   | _, Some ({fconn = QM ; _}, _) ->
       rulefail Stuck
+  | _, Some ({fconn = LTO ; _}, _)
+  | Some ({fconn = LTO ; _}, _), _ ->
+      rulefail Stuck
   end
 
 let resolve_mpar f =

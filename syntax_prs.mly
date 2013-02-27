@@ -18,13 +18,16 @@
 %token  LPAREN COMMA RPAREN
 %token  LNOT
 %token  TENSOR PLUS PAR WITH
+%token  LTO LFROM
 %token  ONE ZERO BOT TOP
 %token  BANG QM FORALL EXISTS DOT
 
 %nonassoc PREC_MIN
+%left     LFROM
+%right    LTO
 %left     PAR
-%left     WITH
 %left     PLUS
+%left     WITH
 %left     TENSOR
 %nonassoc PREC_MAX
 
@@ -48,6 +51,8 @@ form:
 | BOT                        { Syntax._Bot }
 | f=form WITH g=form         { Syntax.(_With f g) }
 | TOP                        { Syntax._Top }
+| f=form LTO g=form
+| g=form LFROM f=form        { Syntax.(_Lto f g) }
 | BANG f=form
   %prec PREC_MAX             { Syntax.(_Bang f) }
 | QM f=form
