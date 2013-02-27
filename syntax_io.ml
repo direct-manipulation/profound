@@ -9,6 +9,8 @@ open Batteries
 open Syntax
 open Result
 
+module F = Syntax_fmt
+
 exception Not_first_order
 
 let rec index_term cx = function
