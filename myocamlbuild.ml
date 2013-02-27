@@ -53,7 +53,7 @@ let _ =
   dispatch begin function
    | After_rules ->
        if !need_to_make_version then make_version "recompilation" ;
-       flag ["ocaml" ; "menhir"] (S [A "--explain" ; A "--strict"]) ;
+       flag ["ocaml" ; "menhir"] (S [A "--explain" (* ; A "--strict" *)]) ;
        flag ["ocaml" ; "compile"] (A "-annot") ;
        flag ["ocaml" ; "compile"] (A "-g") ;
        flag ["ocaml" ; "compile"] (S [A "-w" ; A "@3@5@8@11@12@26@28@29"]) ;

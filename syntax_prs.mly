@@ -4,7 +4,6 @@
 (* See LICENSE for licensing details.                                         *)
 (******************************************************************************)
 %{
-
   let rec make_quant q vs f =
     begin match vs with
     | [] -> f
@@ -13,6 +12,12 @@
 
  let rec negate f = Syntax.(
    match f with
+   | Conn (Lto, fs) ->
+       let (fs, g) = begin match List.rev fs with
+       | g :: fs -> (List.rev fs, g)
+       | _ -> assert false
+       end in
+       conn Tens (fs @ [negate g])
    | Conn (c, fs) ->
        conn (negate_conn c) (List.map negate fs)
    | Atom (s, p, ts) ->
@@ -28,7 +33,7 @@
    | Bang -> Qm | Qm -> Bang
    | Qu (All, x) -> Qu (Ex, x)
    | Qu (Ex, x) -> Qu (All, x)
-   | Lto -> failwith "negate_conn"
+   | Lto -> assert false
  )
 
  and negate_sign = Syntax.(function
@@ -74,7 +79,6 @@ atom_or_eq:
 form:
 | f=atom_or_eq               { f }
 | LNOT f=form %prec PREC_MAX { negate f }
-(* | LNOT head=IDENT args=terms { Syntax.(atom REFUTE head args) } *)
 | f=form TENSOR g=form       { Syntax.(_Tens f g) }
 | ONE                        { Syntax._One }
 | f=form PLUS g=form         { Syntax.(_Plus f g) }
