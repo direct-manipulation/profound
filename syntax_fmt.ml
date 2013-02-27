@@ -57,6 +57,8 @@ module type SPEC = sig
   val op_eq    : doc
   val op_neq   : doc
 
+  val op_negate : doc
+
   val op_tens  : doc
   val op_one   : doc
   val op_plus  : doc
@@ -134,7 +136,7 @@ struct
           let pts = fmt_app p ts in
           match sign with
           | ASSERT -> Doc.Atom (pts)
-          | REFUTE -> Doc.(Atom (Group (H, [String "~" ; space 1 ; pts])))
+          | REFUTE -> Doc.(Atom (Group (H, [Spec.op_negate ; pts])))
         end
     | Conn (Tens, fs) ->
         monoid (List.map (fmt_form cx) fs)
@@ -204,6 +206,8 @@ module Src = Fmt (struct
 
   let op_eq = Group (NOBOX, [String " =" ; space 1])
   let op_neq = Group (NOBOX, [String " <>" ; space 1])
+
+  let op_negate = Group (NOBOX, [String "~" ; space 1])
 
   (* val op_tens  : doc *)
   let op_tens = Group (NOBOX, [String " *" ; space 1])

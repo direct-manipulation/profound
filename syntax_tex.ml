@@ -23,6 +23,8 @@ module Tex = Syntax_fmt.Fmt (struct
   let op_eq = Group (NOBOX, [String " =" ; space 1])
   let op_neq = Group (NOBOX, [String " \\neq" ; space 1])
 
+  let op_negate = Group (NOBOX, [String "\\lnot" ; space 1])
+
   (* val op_tens  : doc *)
   let op_tens = Group (NOBOX, [String " \\TENS" ; space 1])
   (* val op_one   : doc *)
@@ -42,9 +44,9 @@ module Tex = Syntax_fmt.Fmt (struct
   (* val op_lto   : doc *)
   let op_lto = Group (NOBOX, [String " \\LTO" ; space 1])
   (* val op_bang  : doc *)
-  let op_bang = String "\\BANG"
+  let op_bang = Group (NOBOX, [String "\\BANG" ; space 1])
   (* val op_qm    : doc *)
-  let op_qm = String "\\QM"
+  let op_qm = Group (NOBOX, [String "\\QM" ; space 1])
   (* val op_quant : quant -> doc *)
   let op_quant = function
     | All -> String "\\ALL"
