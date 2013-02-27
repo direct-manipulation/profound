@@ -11,6 +11,30 @@
     | v :: vs -> q v (make_quant q vs f)
     end
 
+ let rec negate f = Syntax.(
+   match f with
+   | Conn (c, fs) ->
+       conn (negate_conn c) (List.map negate fs)
+   | Atom (s, p, ts) ->
+       atom (negate_sign s) p ts
+   | Mark _
+   | Subst _ ->
+       assert false
+ )
+
+ and negate_conn = Syntax.(function
+   | Tens -> Par | Plus -> With
+   | Par -> Tens | With -> Plus
+   | Bang -> Qm | Qm -> Bang
+   | Qu (All, x) -> Qu (Ex, x)
+   | Qu (Ex, x) -> Qu (All, x)
+   | Lto -> failwith "negate_conn"
+ )
+
+ and negate_sign = Syntax.(function
+   | ASSERT -> REFUTE | REFUTE -> ASSERT
+ )
+
 %}
 
 %token  EOS PREC_MIN PREC_MAX
@@ -49,7 +73,8 @@ atom_or_eq:
 
 form:
 | f=atom_or_eq               { f }
-| LNOT head=IDENT args=terms { Syntax.(atom REFUTE head args) }
+| LNOT f=form %prec PREC_MAX { negate f }
+(* | LNOT head=IDENT args=terms { Syntax.(atom REFUTE head args) } *)
 | f=form TENSOR g=form       { Syntax.(_Tens f g) }
 | ONE                        { Syntax._One }
 | f=form PLUS g=form         { Syntax.(_Plus f g) }
