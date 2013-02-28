@@ -148,11 +148,11 @@ struct
           ~prec:!!PREC_PLUS ~assoc:Doc.Left
     | Conn (Par, fs) ->
         monoid (List.map (fmt_form cx) fs)
-          ~conn:op_par ~un:op_par
+          ~conn:op_par ~un:op_bot
           ~prec:!!PREC_PAR ~assoc:Doc.Left
     | Conn (With, fs) ->
         monoid (List.map (fmt_form cx) fs)
-          ~conn:op_with ~un:op_with
+          ~conn:op_with ~un:op_top
           ~prec:!!PREC_WITH ~assoc:Doc.Left
     | Conn (Lto, fs) ->
         monoid (List.map (fmt_form cx) fs)

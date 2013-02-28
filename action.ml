@@ -131,7 +131,12 @@ let action_redo = {
   end }
 
 let action_descend = {
-  enabled = (fun _ -> true) ;
+  enabled = begin fun hi ->
+    let (_, f) = unsubst hi.work.form in
+    match f with
+    | Conn (_, _ :: _) -> true
+    | _ -> false
+  end ;
   perform = begin fun hi ->
     tinker hi ~fn:begin
       fun snap ->
@@ -141,7 +146,10 @@ let action_descend = {
   end }
 
 let action_ascend = {
-  enabled = (fun _ -> true) ;
+  enabled = begin fun hi ->
+    let (fcx, _) = unsubst hi.work.form in
+    not (Cx.is_empty fcx)
+  end ;
   perform = begin fun hi ->
     tinker hi ~fn:begin
       fun snap -> 
@@ -161,7 +169,12 @@ let action_ascend_to_top = {
   end }
 
 let action_left = {
-  enabled = (fun _ -> true) ;
+  enabled = begin fun hi ->
+    let (fcx, _) = unsubst hi.work.form in
+    match Cx.rear fcx with
+    | Some (_, {left = _ :: _ ; _}) -> true
+    | _ -> false
+  end ;
   perform = begin fun hi ->
     tinker hi ~fn:begin
       fun snap ->
@@ -171,7 +184,12 @@ let action_left = {
   end }
 
 let action_right = {
-  enabled = (fun _ -> true) ;
+  enabled = begin fun hi ->
+    let (fcx, _) = unsubst hi.work.form in
+    match Cx.rear fcx with
+    | Some (_, {right = _ :: _ ; _}) -> true
+    | _ -> false
+  end ;
   perform = begin fun hi ->
     tinker hi ~fn:begin
       fun snap ->
