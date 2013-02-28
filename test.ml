@@ -12,3 +12,6 @@ let form str =
   | Bad msg -> failwith msg
   end
 
+let display f =
+  let (fcx, f) = unsubst f in
+  (Fcx.to_list fcx, f)

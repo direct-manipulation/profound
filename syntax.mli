@@ -14,13 +14,13 @@ val equals : Idt.t
 
 type sign = ASSERT | REFUTE
 
+type fcx
+
 type form = private
   | Atom  of sign * Idt.t * term list
   | Conn  of conn * form list
   | Subst of fcx * form
   | Mark  of mkind * form
-
-and fcx = frame Cx.t
 
 and frame = {
   conn : conn ;
@@ -47,6 +47,18 @@ val seq : sub -> sub -> sub
 
 val unsubst : form -> fcx * form
 val unframe : frame -> form -> form
+
+module Fcx : sig
+  val empty : fcx
+  val cons : frame -> fcx -> fcx
+  val snoc : fcx -> frame -> fcx
+  val front : fcx -> (frame * fcx) option
+  val rear : fcx -> (fcx * frame) option
+  val append : fcx -> fcx -> fcx
+  val to_list : fcx -> frame list
+  val size : fcx -> int
+  val is_empty : fcx -> bool
+end
 
 val focus : form -> form
 
@@ -85,3 +97,5 @@ val unmark : form -> form
 val aeq_forms : form -> form -> bool
 
 val var_occurs : Idt.t -> form -> bool
+
+val negate : form -> form

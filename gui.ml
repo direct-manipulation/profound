@@ -86,10 +86,9 @@ struct
 
   exception Cancelled_action
 
-  let read_term x cx =
+  let read_thing ~title ~label ~parse =
     let dwin = GWindow.dialog
-      ~parent:main_win
-      ~title:"Witness modeut"
+      ~parent:main_win ~title
       ~modal:true
       ~position:`CENTER_ON_PARENT
       () in
@@ -100,7 +99,7 @@ struct
     let _lab = GMisc.label
       ~xalign:0.
       ~packing:(dwin#vbox#pack ~expand:false)
-      ~text:(Printf.sprintf "Enter a witness for " ^ (Idt.src_rep x) ^ ":")
+      ~text:label
       () in
     let ebox = GEdit.entry
       ~text:""
@@ -121,7 +120,7 @@ struct
     dwin#destroy () ;
     begin match resp with
     | `OK ->
-        begin match Syntax_io.term_of_string cx txt with
+        begin match parse txt with
         | Ok t -> t
         | Bad msg ->
             flash "Failed to parse %S: %s" txt msg ;
@@ -130,6 +129,12 @@ struct
     | _ ->
         raise Cancelled_action
     end      
+
+  let read_term x cx =
+    let title = "Term input" in
+    let label = Printf.sprintf "Enter a witness for %s:" (Idt.src_rep x) in
+    let parse txt = Syntax_io.term_of_string cx txt in
+    read_thing ~title ~label ~parse
 
   (* key processing *)
 

@@ -241,6 +241,43 @@ let unmark f =
   | _ -> f
   end
 
+module Fcx = struct
+  let cons fr fcx =
+    begin match Cx.front fcx with
+    | Some (hfr, fcx) when hfr.conn = fr.conn ->
+        let fr = { fr with
+          left = hfr.left @ fr.left ;
+          right = hfr.right @ fr.right ;
+        } in
+        Cx.cons fr fcx
+    | _ -> Cx.cons fr fcx
+    end
+
+  let snoc fcx fr =
+    begin match Cx.rear fcx with
+    | Some (fcx, rfr) when rfr.conn = fr.conn ->
+        let fr = { rfr with
+          left = fr.left @ rfr.left ;
+          right = fr.right @ rfr.right ;
+        } in
+        Cx.snoc fcx fr
+    | _ -> Cx.snoc fcx fr
+    end
+
+  let rec append fcx1 fcx2 =
+    begin match Cx.front fcx2 with
+    | None -> fcx1
+    | Some (fr, fcx2) -> append (snoc fcx1 fr) fcx2
+    end
+
+  let empty = Cx.empty
+  let front = Cx.front
+  let rear = Cx.rear
+  let to_list = Cx.to_list
+  let size = Cx.size
+  let is_empty = Cx.is_empty
+end
+
 type sub =
   | Shift of int
   | Dot of sub * term
@@ -364,8 +401,6 @@ let rec fcx_vars fcx =
       []
   end
 
-let subst1 fr f = subst (Cx.of_list [fr]) f
-
 let rec unsubst f =
   begin match f with
   | Subst (fcx, f) -> (fcx, f)
@@ -408,3 +443,30 @@ let rec aeq_forms f1 f2 =
   | _, Subst _ -> assert false
   | _ -> false
   end
+
+ let rec negate f =
+   match f with
+   | Conn (Lto, fs) ->
+       let (fs, g) = begin match List.rev fs with
+       | g :: fs -> (List.rev fs, g)
+       | _ -> assert false
+       end in
+       conn Tens (fs @ [negate g])
+   | Conn (c, fs) ->
+       conn (negate_conn c) (List.map negate fs)
+   | Atom (s, p, ts) ->
+       atom (negate_sign s) p ts
+   | Mark _
+   | Subst _ ->
+       assert false
+
+ and negate_conn = function
+   | Tens -> Par | Plus -> With
+   | Par -> Tens | With -> Plus
+   | Bang -> Qm | Qm -> Bang
+   | Qu (All, x) -> Qu (Ex, x)
+   | Qu (Ex, x) -> Qu (All, x)
+   | Lto -> assert false
+
+ and negate_sign = function
+   | ASSERT -> REFUTE | REFUTE -> ASSERT

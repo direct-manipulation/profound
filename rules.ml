@@ -24,7 +24,7 @@ let explain = function
   | Already_marked -> "trying to mark a marked formula -- THIS IS A BUG (please report)"
 
 let is_qm fcx f =
-  begin match Cx.front fcx with
+  begin match Fcx.front fcx with
   | Some ({conn = Qm ; _}, _) -> true
   | Some _ -> false
   | None ->
@@ -35,7 +35,7 @@ let is_qm fcx f =
   end
 
 let rec bang_free fcx =
-  begin match Cx.front fcx with
+  begin match Fcx.front fcx with
   | None -> true
   | Some ({conn = Bang ; _}, _) -> false
   | Some (_, fcx) -> bang_free fcx
@@ -84,7 +84,7 @@ let rec find_marked f =
   begin match f with
   | Atom _ -> None
   | Subst _ -> assert false
-  | Mark _ -> Some (Cx.empty, f)
+  | Mark _ -> Some (Fcx.empty, f)
   | Conn (c, fs) ->
       begin match find_marked_arg [] fs with
       | Some (lfs, fcx, f, rfs) ->
@@ -93,7 +93,7 @@ let rec find_marked f =
             left = lfs ;
             right = rfs ;
           } in
-          let fcx = Cx.cons fr fcx in
+          let fcx = Fcx.cons fr fcx in
           Some (fcx, f)
       | None -> None
       end
@@ -141,7 +141,7 @@ let find_frame_mate fr0 fcx1 f1 =
   end
 
 let rec find_fcx_mate fcx0 fcx1 f1 =
-  begin match Cx.rear fcx0 with
+  begin match Fcx.rear fcx0 with
   | Some (fcx0, fr0) ->
       begin match find_frame_mate fr0 fcx1 f1 with
       | Some (lfs, fcx1, f1, mfs, fcx2, f2, rfs) ->
@@ -149,10 +149,10 @@ let rec find_fcx_mate fcx0 fcx1 f1 =
             left = lfs ;
             right = List.rev_append mfs rfs ;
           } in
-          let fcx0 = Cx.snoc fcx0 fr0 in
+          let fcx0 = Fcx.snoc fcx0 fr0 in
           Some (fcx0, fcx1, f1, fcx2, f2)
       | None ->
-          let fcx1 = Cx.cons fr0 fcx1 in
+          let fcx1 = Fcx.cons fr0 fcx1 in
           find_fcx_mate fcx0 fcx1 f1
       end
   | None -> None
@@ -176,31 +176,31 @@ let explain_link_error = function
       "no common par of ? ancestor of source and sink"
 
 let rec lowest_qm f r =
-  begin match Cx.rear f with
-  | Some (f, ({conn = Qm ; _} as fr)) -> (f, Cx.cons fr r)
-  | Some (f, fr) -> lowest_qm f (Cx.cons fr r)
+  begin match Fcx.rear f with
+  | Some (f, ({conn = Qm ; _} as fr)) -> (f, Fcx.cons fr r)
+  | Some (f, fr) -> lowest_qm f (Fcx.cons fr r)
   | None -> linkfail Bad_ancestor
   end
 
 let unravel gcx fcx1 f1 fcx2 f2 =
-  begin match Cx.rear gcx with
+  begin match Fcx.rear gcx with
   | Some (gcx, fr) ->
       let fr1 = {fr with right = subst fcx2 (unmark f2) :: fr.right} in
       let fr2 = {fr with left = subst fcx1 (unmark f1) :: fr.left} in
-      let fcx1 = Cx.cons fr1 fcx1 in
-      let fcx2 = Cx.cons fr2 fcx2 in
-      (Cx.append gcx fcx1, Cx.append gcx fcx2)
+      let fcx1 = Fcx.cons fr1 fcx1 in
+      let fcx2 = Fcx.cons fr2 fcx2 in
+      (Fcx.append gcx fcx1, Fcx.append gcx fcx2)
   | None -> assert false
   end
 
 let maybe_contract fcx0 fcx1 f1 fcx2 f2 =
-  begin match Cx.rear fcx0 with
+  begin match Fcx.rear fcx0 with
   | Some (_, {conn = Par ; _}) ->
       (fcx0, fcx1, f1, fcx2, f2)
   | _ ->
       Log.(log DEBUG "Had to contract") ;
-      let (fcx0, gcx) = lowest_qm fcx0 Cx.empty in
-      let fcx0 = Cx.snoc fcx0 { conn = Par ; left = [] ; right = [] } in
+      let (fcx0, gcx) = lowest_qm fcx0 Fcx.empty in
+      let fcx0 = Fcx.snoc fcx0 { conn = Par ; left = [] ; right = [] } in
       let (fcx1, fcx2) = unravel gcx fcx1 f1 fcx2 f2 in
       (fcx0, fcx1, f1, fcx2, f2)
   end
@@ -210,7 +210,7 @@ let maybe_contract fcx0 fcx1 f1 fcx2 f2 =
 let match_links f =
   begin match find_marked f with
   | Some (fcx0, f1) ->
-      begin match find_fcx_mate fcx0 Cx.empty f1 with
+      begin match find_fcx_mate fcx0 Fcx.empty f1 with
       | Some (fcx0, fcx1, f1, fcx2, f2) ->
           (* Log.(log DEBUG "match_links PRE begin") ; *)
           (* Log.(log DEBUG " f0 = %s" (Syntax_tex.form_to_string [] (subst fcx0 __debug))) ; *)
@@ -223,7 +223,7 @@ let match_links f =
           (* Log.(log DEBUG " f1 = %s" (Syntax_tex.form_to_string (fcx_vars fcx0) (subst fcx1 f1))) ; *)
           (* Log.(log DEBUG " f2 = %s" (Syntax_tex.form_to_string (fcx_vars fcx0) (subst fcx2 f2))) ; *)
           (* Log.(log DEBUG "match_links POST end") ; *)
-          (* begin match Cx.rear fcx0 with *)
+          (* begin match Fcx.rear fcx0 with *)
           (* | Some (_, {conn = PAR ; _}) -> () *)
           (* | _ -> linkfail Invalid_marks *)
           (* end ; *)
@@ -240,7 +240,7 @@ let match_links f =
   end
 
 let rec resolve_mpar_ fcx1 f1 fcx2 f2 =
-  begin match Cx.front fcx1, Cx.front fcx2 with
+  begin match Fcx.front fcx1, Fcx.front fcx2 with
   | None, None ->
       let f1 = unmark f1 in
       let f2 = unmark f2 in

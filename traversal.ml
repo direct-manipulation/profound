@@ -52,12 +52,12 @@ let go_down n f =
         (fr, f)
     | Subst _ -> assert false
     end in
-  let fcx = Cx.snoc fcx fr in
+  let fcx = Fcx.snoc fcx fr in
   subst fcx f
 
 let go_up f =
   let (fcx, f) = unsubst f in
-  begin match Cx.rear fcx with
+  begin match Fcx.rear fcx with
   | Some (fcx, fr) ->
       subst fcx (unframe fr f)
   | None -> travfail At_top
@@ -71,7 +71,7 @@ let rec go_top f =
 
 let go_left f =
   let (fcx, f) = unsubst f in
-  begin match Cx.rear fcx with
+  begin match Fcx.rear fcx with
   | Some (fcx, fr) ->
       begin match fr.left with
       | lf :: lfs ->
@@ -79,7 +79,7 @@ let go_left f =
             left = lfs ;
             right = f :: fr.right ;
           } in
-          let fcx = Cx.snoc fcx fr in
+          let fcx = Fcx.snoc fcx fr in
           subst fcx lf
       | [] -> travfail At_edge
       end
@@ -88,7 +88,7 @@ let go_left f =
 
 let go_right f =
   let (fcx, f) = unsubst f in
-  begin match Cx.rear fcx with
+  begin match Fcx.rear fcx with
   | Some (fcx, fr) ->
       begin match fr.right with
       | rf :: rfs ->
@@ -96,7 +96,7 @@ let go_right f =
             right = rfs ;
             left = f :: fr.left ;
           } in
-          let fcx = Cx.snoc fcx fr in
+          let fcx = Fcx.snoc fcx fr in
           subst fcx rf
       | [] -> travfail At_edge
       end
