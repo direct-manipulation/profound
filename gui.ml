@@ -136,6 +136,12 @@ struct
     let parse txt = Syntax_io.term_of_string cx txt in
     read_thing ~title ~label ~parse
 
+  let read_form cx =
+    let title = "Formula input" in
+    let label = "Enter a cut formula:" in
+    let parse txt = Syntax_io.form_of_string cx txt in
+    read_thing ~title ~label ~parse
+
   (* key processing *)
 
   type key = {
@@ -198,6 +204,8 @@ struct
                        ; desc = "?=derelict"           } ;
       add ~s _Return { action = action_witness ~read:read_term
                      ; desc   = "Shift-Enter=witness"  } ;
+      add ~c _Return { action = action_cut ~read:read_form
+                     ; desc   = "^Enter=cut"           } ;
       add ~c _z      { action = action_undo
                      ; desc   = "^Z=undo"              } ;
       add ~c _Down   { action = action_undo

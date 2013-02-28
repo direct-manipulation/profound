@@ -327,6 +327,20 @@ let action_witness ~read = {
     end
   end }
 
+let action_cut ~read = {
+  enabled = (fun _ -> true) ;
+  perform = begin fun hi ->
+    commit hi ~fn:begin
+      fun snap ->
+        let (fcx, form) = unsubst snap.form in
+        let cform = read (fcx_vars fcx) in
+        let cform = _Tens cform (negate cform) in
+        let form = _Par cform form in
+        let form = subst fcx form in
+        { snap with form }
+    end
+  end }
+
 let action_complete_link = {
   enabled = begin fun hi ->
     hi.work.mmode = Marked
