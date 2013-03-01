@@ -64,8 +64,16 @@ rule token = parse
 
 | eof              { P.EOS }
 | _                {
-  Printf.eprintf "Invalid character %s\n%!" (String.escaped (Lexing.lexeme lexbuf)) ;
-  raise P.Error
+  Lexing.(
+    Log.eprintf "Invalid character '%s' at %s, line %d, character %d"
+      (String.escaped (lexeme lexbuf))
+      (match lexbuf.lex_curr_p.pos_fname with
+      | "" -> "<command line>"
+      | fin -> fin)
+      lexbuf.lex_curr_p.pos_lnum
+      (lexbuf.lex_curr_p.pos_cnum - lexbuf.lex_curr_p.pos_bol) ;
+    raise P.Error
+  )
 }
 
 and line_comment = parse

@@ -32,7 +32,7 @@ let log ?force lev fmt =
     end in
   begin match ouch with
   | Some ch ->
-      Printf.fprintf ch "[%s] " (lev_string lev) ;
+      if lev >= ERROR then Printf.fprintf ch "[%s] " (lev_string lev) ;
       Printf.fprintf ch (fmt ^^ "\n%!")
   | None ->
       Printf.ifprintf () fmt
@@ -64,3 +64,5 @@ let to_file f =
     file_channels := Map.add f ch !file_channels ;
     logdest := ch
   end
+
+let eprintf fmt = log ~force:stderr FATAL fmt

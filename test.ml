@@ -6,11 +6,7 @@ open Rules
 
 open Idt
 
-let form str =
-  begin match Syntax_io.form_of_string [] str with
-  | Ok f -> f
-  | Bad msg -> failwith msg
-  end
+let form str = Syntax_io.form_of_string [] str
 
 let display f =
   let (fcx, f) = unsubst f in

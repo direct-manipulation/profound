@@ -23,7 +23,7 @@ let infile = ref None
 let set_infile fn =
   begin match !infile with
   | Some ofn ->
-      Printf.eprintf "Cannot specify more than one input file\n%!" ;
+      Log.eprintf "Cannot specify more than one input file" ;
       exit 1
   | None ->
       if Sys.file_exists fn then
@@ -61,25 +61,28 @@ let parse_opts () =
   let imm_txt = ref None in
   let add_txt txt = match !imm_txt with
     | Some _ ->
-        Printf.eprintf "Only a single theorem at a time!\n%!" ;
+        Log.eprintf "Only a single theorem at a time!" ;
         raise (Bad txt)
     | None ->
         imm_txt := Some txt
   in
   parse opts add_txt umsg ;
-  begin match !infile, !imm_txt with
-  | Some inf, Some txt ->
-      Log.(log ERROR "Ignoring input file %S" inf) ;
-      Gui.Imm txt
+  try begin match !infile, !imm_txt with
+  | _, Some txt ->
+      if Option.is_some !infile then
+        Log.(log ERROR "Ignoring input file %S" (Option.get !infile)) ;
+      Gui.Imm (Syntax_io.form_of_string [] txt)
   | Some fin, None ->
-      Gui.File fin
-  | None, Some txt ->
-      Gui.Imm txt
+      Gui.File (fin, Syntax_io.load_file fin)
   | None, None ->
-      Printf.eprintf "Need an input file or theorem\n%!" ;
+      Log.eprintf "Need an input file or theorem" ;
       Arg.usage opts umsg ;
       exit 1
-  end
+  end with
+  | Syntax_io.Parsing msg ->
+      if msg = "" then Log.eprintf "Parsing error"
+      else Log.eprintf "Parsing error: %s" msg ;
+      exit 1
         
 let main () =
   Log.to_stdout () ;

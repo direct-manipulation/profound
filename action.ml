@@ -53,12 +53,11 @@ let render hi =
   (past, cur, fut)
 
 type action_error =
-  | Cancelled of string
+  | Cancelled
   | Invalid of string
 exception Action of action_error
 let explain = function
-  | Cancelled "" -> "Cancelled!"
-  | Cancelled msg -> "Cancelled: " ^ msg
+  | Cancelled -> ""
   | Invalid msg -> msg
 
 let actfail msg = raise (Action (Invalid msg))
@@ -324,9 +323,11 @@ let action_cut ~read = {
       fun snap ->
         let (fcx, form) = unsubst snap.form in
         let cform = read (fcx_vars fcx) in
-        let form = _Par (negate cform) form in
-        let form = _Tens cform form in
-        let form = Traversal.descend [1 ; 1] (subst fcx form) in
+        let fcx = Fcx.snoc fcx
+          {conn = Tens ; left = [cform] ; right = []} in
+        let fcx = Fcx.snoc fcx
+          {conn = Par ; left = [negate cform] ; right = []} in
+        let form = subst fcx form in
         { snap with form }
     end
   end }

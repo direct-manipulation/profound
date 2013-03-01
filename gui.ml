@@ -10,8 +10,8 @@ open Syntax
 let wash_file = "tex/wash_form1.png"
 
 type mode =
-  | Imm  of string
-  | File of string
+  | Imm  of form
+  | File of string * Action.history
 
 module type Param = sig
   val mode : mode
@@ -20,26 +20,11 @@ end
 module Run (Param : Param) =
 struct
 
-  let initial_state = match Param.mode with
-  | Imm str ->
-      begin match Syntax_io.form_of_string [] str with
-      | Ok f -> Action.init f
-      | Bad msg ->
-          Log.(log FATAL "Parsing error [%s] parsing:" msg) ;
-          Log.(log FATAL "\t%s" str) ;
-          exit 1
-      end
-  | File fin ->
-      Syntax_io.(
-        try load_file fin with
-        | Parsing msg ->
-            Log.(log FATAL "Parsing error [%s] parsing file:" msg) ;
-            Log.(log FATAL "\t%S" fin) ;
-            exit 1
-      )
-  ;;
-  
-  let state = ref initial_state
+  let state = ref (
+    match Param.mode with
+    | Imm f -> Action.init f
+    | File (fin, hi) -> hi
+  )
 
   let main_win =
     let win = GWindow.window
@@ -80,10 +65,8 @@ struct
   let flash fmt =
     Printf.ksprintf (fun txt ->
       if not !awaiting_quit then
-        stat#flash ~delay:1500 txt
+        stat#flash ~delay:2000 txt
     ) fmt
-
-  exception Cancelled_action
 
   let read_thing ~title ~label ~parse =
     let dwin = GWindow.dialog
@@ -119,14 +102,14 @@ struct
     dwin#destroy () ;
     begin match resp with
     | `OK ->
-        begin match parse txt with
-        | Ok t -> t
-        | Bad msg ->
-            flash "Failed to parse %S: %s" txt msg ;
-            raise Cancelled_action
+        begin
+          try parse txt with
+          | Syntax_io.Parsing msg ->
+              flash "Failed to parse %S: %s" txt msg ;
+              raise Action.(Action Cancelled)
         end
     | _ ->
-        raise Cancelled_action
+        raise Action.(Action Cancelled)
     end      
 
   let read_term x cx =
@@ -240,7 +223,7 @@ struct
             perform = (fun _ -> quit ()) ;
           } in
           add ~c _q { action = action_quit ; desc = "" }
-      | File fin ->
+      | File (fin, _) ->
           let action_quit = {
             enabled = (fun _ -> true) ;
             perform = begin fun hi ->
@@ -306,8 +289,8 @@ struct
           end ads ;
           false
         ) with
-        | Cancelled_action ->
-            Log.(log DEBUG "Action was cancelled") ;
+        | Action.Action err -> 
+            Log.(log DEBUG "Action error: %s" (Action.explain err)) ;
             true
         | Handled -> true
         end

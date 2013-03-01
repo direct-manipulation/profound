@@ -46,20 +46,19 @@ let rec index_form cx f =
   | Subst _ -> assert false
   end
 
+exception Parsing of string
 
 let thing_of_string prs ind cx str =
   let lb = Lexing.from_string str in
   try
     let t = prs Syntax_lex.token lb in
-    Ok (ind cx t)
+    ind cx t
   with
-  | Not_first_order -> Bad "variables cannot have arguments"
-  | Syntax_prs.Error -> Bad "reading term"
+  | Not_first_order -> raise (Parsing "variables cannot have arguments")
+  | Syntax_prs.Error -> raise (Parsing "")
 
 let form_of_string cx str = thing_of_string Syntax_prs.one_form index_form cx str
 let term_of_string cx str = thing_of_string Syntax_prs.one_term index_term cx str
-
-exception Parsing of string
 
 let parse_file f =
   try
