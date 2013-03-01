@@ -16,9 +16,9 @@ module Tex = Syntax_fmt.Fmt (struct
   (* val i_var    : idt -> doc *)
   let i_var x = String (Idt.tex_rep x)
   (* val i_pred   : idt -> doc *)
-  let i_pred x = String (Idt.tex_rep x)
+  let i_pred x = String ("\\text{\\rmfamily\\slshape " ^ Idt.tex_rep x ^ "}")
   (* val i_con    : idt -> doc *)
-  let i_con x = String ("\\mathsf{" ^ Idt.tex_rep x ^ "}")
+  let i_con x = String ("\\text{\\sffamily\\slshape " ^ Idt.tex_rep x ^ "}")
 
   let op_eq = Group (NOBOX, [String " =" ; space 1])
   let op_neq = Group (NOBOX, [String " \\neq" ; space 1])

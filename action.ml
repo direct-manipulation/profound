@@ -324,9 +324,9 @@ let action_cut ~read = {
       fun snap ->
         let (fcx, form) = unsubst snap.form in
         let cform = read (fcx_vars fcx) in
-        let cform = _Tens cform (negate cform) in
-        let form = _Par cform form in
-        let form = subst fcx form in
+        let form = _Par (negate cform) form in
+        let form = _Tens cform form in
+        let form = Traversal.descend [1 ; 1] (subst fcx form) in
         { snap with form }
     end
   end }
