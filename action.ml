@@ -1,11 +1,4 @@
 (******************************************************************************)
-(* action.ml --- gui                                                          *)
-(*                                                                            *)
-(* Author: Kaustuv Chaudhuri <kaustuv.chaudhuri@inria.fr>                     *)
-(* Copyright (C) 2013  INRIA                                                  *)
-(* See LICENSE for licensing details.                                         *)
-(******************************************************************************)
-(******************************************************************************)
 (* Author: Kaustuv Chaudhuri <kaustuv.chaudhuri@inria.fr>                     *)
 (* Copyright (C) 2013  INRIA                                                  *)
 (* See LICENSE for licensing details.                                         *)
@@ -13,7 +6,6 @@
 
 open Batteries
 open Syntax
-open Result
 
 module Src = Syntax_fmt.Src
 
@@ -61,35 +53,37 @@ let render hi =
   (past, cur, fut)
 
 type action_error =
-  | Parsing_witness of string
-exception Action_failure of action_error
-let actfail err = raise (Action_failure err)
+  | Cancelled of string
+  | Invalid of string
+exception Action of action_error
 let explain = function
-  | Parsing_witness msg -> "cannot parse term: " ^ msg
+  | Cancelled "" -> "Cancelled!"
+  | Cancelled msg -> "Cancelled: " ^ msg
+  | Invalid msg -> msg
+
+let actfail msg = raise (Action (Invalid msg))
 
 let tinker ~fn hi =
   try 
     let work = fn hi.work in
-    Ok { hi with dirty = true ; work }
+    { hi with dirty = true ; work }
   with
-  | Traversal.Traversal_failure err -> Bad (Traversal.explain err)
-  | Rules.Rule_failure err -> Bad (Rules.explain err)
-  | Action_failure err -> Bad (explain err)
+  | Traversal.Traversal_failure err -> actfail (Traversal.explain err)
+  | Rules.Rule_failure err -> actfail (Rules.explain err)
 
 let commit ~fn hi =
   try
     let present = fn hi.work in
     let past = hi.work :: hi.past in
-    Ok { work = present ; dirty = false ; past ; present ; future = [] }
+    { work = present ; dirty = false ; past ; present ; future = [] }
   with
-  | Traversal.Traversal_failure err -> Bad (Traversal.explain err)
-  | Rules.Link_matching err -> Bad (Rules.explain_link_error err)
-  | Rules.Rule_failure err -> Bad (Rules.explain err)
-  | Action_failure err -> Bad (explain err)
+  | Traversal.Traversal_failure err -> actfail (Traversal.explain err)
+  | Rules.Link_matching err -> actfail (Rules.explain_link_error err)
+  | Rules.Rule_failure err -> actfail (Rules.explain err)
 
 type action = {
   enabled : history -> bool ;
-  perform : history -> (history, string) Result.t
+  perform : history -> history ;
 }
 
 type t = action
@@ -98,19 +92,17 @@ let action_undo = {
   enabled = (fun hi -> hi.dirty || hi.past <> []) ;
   perform = begin fun hi ->
     if hi.dirty then
-      Ok { hi with dirty = false ; work = hi.present }
+      { hi with dirty = false ; work = hi.present }
     else begin
       match hi.past with
       | p :: past ->
-          Ok {
-            work = p ;
+          { work = p ;
             dirty = false ;
             past ;
             present = p ;
-            future = hi.present :: hi.future
-          }
+            future = hi.present :: hi.future }
       | _ ->
-          Bad "no previous states"
+          actfail "no previous states"
     end
   end }
 
@@ -119,14 +111,12 @@ let action_redo = {
   perform = begin fun hi ->
     begin match hi.future with
     | f :: future ->
-        Ok {
-          work = f ;
+        { work = f ;
           dirty = false ;
           past = hi.present :: hi.past ;
           present = f ;
-          future ;
-        }
-    | _ -> Bad "no future states"
+          future }
+    | _ -> actfail "no future states"
     end
   end }
 

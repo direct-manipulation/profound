@@ -6,7 +6,6 @@
 
 open Batteries
 open Syntax
-open Result
 
 let wash_file = "tex/wash_form1.png"
 
@@ -31,13 +30,13 @@ struct
           exit 1
       end
   | File fin ->
-      begin match Syntax_io.load_file fin with
-      | Ok hi -> hi
-      | Bad msg -> 
-          Log.(log FATAL "Parsing error [%s] parsing file:" msg) ;
-          Log.(log FATAL "\t%S" fin) ;
-          exit 1
-      end
+      Syntax_io.(
+        try load_file fin with
+        | Parsing msg ->
+            Log.(log FATAL "Parsing error [%s] parsing file:" msg) ;
+            Log.(log FATAL "\t%S" fin) ;
+            exit 1
+      )
   ;;
   
   let state = ref initial_state
@@ -63,7 +62,7 @@ struct
   let quit () =
     awaiting_quit := true ;
     main_win#destroy () ;
-    Ok !state
+    !state
 
   let (disp, stat) =
     let box = GPack.vbox ~packing:main_win#add () in
@@ -221,7 +220,7 @@ struct
         perform = (fun hi ->
           incr Syntax_tex.max_hist ;
           Log.(log INFO "Now showing %d history line(s)" !Syntax_tex.max_hist) ;
-          Ok hi
+          hi
         ) } in
       add ~s _plus   { action = action_more_history
                      ; desc   = ""                     } ;
@@ -230,7 +229,7 @@ struct
         perform = (fun hi ->
           decr Syntax_tex.max_hist ;
           Log.(log INFO "Now showing %d history line(s)" !Syntax_tex.max_hist) ;
-          Ok hi
+          hi
         ) } in
       add _minus     { action = action_less_history
                      ; desc   = ""                     } ;
@@ -254,7 +253,7 @@ struct
             enabled = (fun _ -> true) ;
             perform = begin fun hi ->
               Syntax_io.save_file fin hi ;
-              Ok hi
+              hi
             end
           } in
           add ~c _s { action = action_save ; desc = "" }
@@ -297,14 +296,12 @@ struct
             fun ad ->
               let act = ad.action in
               if act.Action.enabled !state then begin
-                begin match act.Action.perform !state with
-                | Ok new_state ->
-                    state := new_state ;
-                    redisplay ()
-                | Bad msg ->
-                    flash "%s" msg
-                end ;
-                raise Handled
+                try
+                  state := act.Action.perform !state ;
+                  redisplay () ;
+                  raise Handled
+                with
+                | Action.Action err -> flash "%s" (Action.explain err)
               end else ()
           end ads ;
           false

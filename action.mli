@@ -15,9 +15,15 @@ val is_history_of : history -> form -> bool
 
 val render : history -> form list * form * form list
 
+type action_error =
+  | Cancelled of string
+  | Invalid of string
+exception Action of action_error
+val explain : action_error -> string
+
 type action = {
   enabled : history -> bool ;
-  perform : history -> (history, string) Result.t ;
+  perform : history -> history ;
 }
 
 type t = action
