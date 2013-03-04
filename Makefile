@@ -1,6 +1,8 @@
 TARGET := profound
 
-OCB := _build/myocamlbuild -use-ocamlfind
+OCB_FLAGS := -classic-display -j 4
+
+OCB := _build/myocamlbuild -use-ocamlfind ${OCB_FLAGS}
 
 .PHONY: all debug clean top
 
@@ -13,8 +15,8 @@ debug: all
 _build/myocamlbuild: myocamlbuild.ml
 	ocamlbuild -just-plugin
 
-clean: _build/myocamlbuild
-	${OCB} -clean
+clean:
+	ocamlbuild -no-plugin ${OCB_FLAGS} -clean
 	${RM} version.ml
 
 top:
