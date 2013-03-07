@@ -7,7 +7,7 @@
 open Batteries
 open Syntax
 
-let wash_file = "tex/wash_form1.png"
+let wash_file = Filename.concat Syntax_tex.pdir "wash_form1.png"
 
 type mode =
   | Imm  of form

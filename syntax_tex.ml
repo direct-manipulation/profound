@@ -71,14 +71,18 @@ let max_hist = ref 3
 
 let wash_command = ref ""
 
-let set_dpi d =
-  Log.(log INFO "Setting DPI to %d" d) ;
-  if d < 75 || d > 240 then
-    Log.(log WARN "Unusual DPI: %d" d) ;
+let pdir = Filename.dirname Sys.executable_name ^ "/../share/profound"
+
+let set_dpi dpi =
+  Log.(log INFO "Setting DPI to %d" dpi) ;
+  if dpi < 75 || dpi > 240 then
+    Log.(log WARN "Unusual DPI: %d" dpi) ;
+  (* let redirect = "" in *)
+  let redirect = ">/dev/null 2>&1" in
   wash_command := Printf.sprintf
-    "( cd tex  && latex '\\nonstopmode\\input wash_form.tex' && dvipng -D %d -T tight -bg transparent -z 9 wash_form.dvi ) %s" d
-    (* "" *)
-    ">/dev/null 2>&1"
+    "( cd \"%s\"  && latex '\\nonstopmode\\input wash_form.tex' && dvipng -D %d -T tight -bg transparent -z 9 wash_form.dvi ) %s"
+    pdir dpi redirect ;
+  Log.(log DEBUG "wash_command: %s" !wash_command)
 
 let () = set_dpi 120
 
