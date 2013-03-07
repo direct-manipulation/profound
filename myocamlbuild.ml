@@ -9,7 +9,7 @@ open Ocamlbuild_plugin ;;
 let major = 0
 let minor = 3
 let patch = 2
-let tag   = "itp13"
+let tag   = ""
 
 (*********************************************************************************)
 
