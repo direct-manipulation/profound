@@ -1,5 +1,0 @@
-Interactive proof exploration system based on formula linking.
-
-Currently the tool is limited to classical first-order linear logic, but
-variants supporting intuitionistic and non-linear logics are expected
-soon.
