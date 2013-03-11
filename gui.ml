@@ -59,7 +59,7 @@ struct
     ignore (GMisc.separator `HORIZONTAL ~packing:(box#pack ~expand:false) ()) ;
     let sbar = GMisc.statusbar
       ~packing:(box#pack ~expand:false) () in
-    let stat = sbar#new_context "default" in
+    let stat = sbar#new_context ~name:"default" in
     (disp, stat)
 
   let flash fmt =

@@ -7,8 +7,8 @@
 open Ocamlbuild_plugin ;;
 
 let major = 0
-let minor = 3
-let patch = 3
+let minor = 4
+let patch = 1
 let tag   = ""
 
 (*********************************************************************************)
@@ -56,7 +56,7 @@ let _ =
        flag ["ocaml" ; "menhir"] (S [A "--explain" (* ; A "--strict" *)]) ;
        flag ["ocaml" ; "compile"] (A "-annot") ;
        flag ["ocaml" ; "compile"] (A "-g") ;
-       flag ["ocaml" ; "compile"] (S [A "-w" ; A "@3@5@8@11@12@26@28@29"]) ;
+       flag ["ocaml" ; "compile"] (S [A "-w" ; A "@3@5@6@8..12@14@20@26@28@29"]) ;
        flag ["ocaml" ; "native" ; "compile"] (A "-nodynlink") ;
    | _ -> ()
 end
