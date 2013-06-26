@@ -1,8 +1,9 @@
-(******************************************************************************)
-(* Author: Kaustuv Chaudhuri <kaustuv.chaudhuri@inria.fr>                     *)
-(* Copyright (C) 2013  INRIA                                                  *)
-(* See LICENSE for licensing details.                                         *)
-(******************************************************************************)
+(*
+ * Author: Kaustuv Chaudhuri <kaustuv.chaudhuri@inria.fr>
+ * Copyright (C) 2013  Inria (Institut National de Recherche
+ *                     en Informatique et en Automatique)
+ * See LICENSE for licensing details.
+ *)
 
 open Batteries
 open Log
@@ -146,9 +147,9 @@ let rec find_fcx_mate fcx0 fcx1 f1 =
       begin match find_frame_mate fr0 fcx1 f1 with
       | Some (lfs, fcx1, f1, mfs, fcx2, f2, rfs) ->
           let fr0 = { fr0 with
-            left = lfs ;
-            right = List.rev_append mfs rfs ;
-          } in
+                      left = lfs ;
+                      right = List.rev_append mfs rfs ;
+                    } in
           let fcx0 = Fcx.snoc fcx0 fr0 in
           Some (fcx0, fcx1, f1, fcx2, f2)
       | None ->
@@ -263,18 +264,18 @@ let rec resolve_mpar_ fcx1 f1 fcx2 f2 =
       let u2 = go_top (subst fcx2 (unmark f2)) in
       let dist f = conn Par [f ; u2] in
       let fr = { fr with
-        left = List.map dist fr.left ;
-        right = List.map dist fr.right ;
-      } in
+                 left = List.map dist fr.left ;
+                 right = List.map dist fr.right ;
+               } in
       unframe fr f0
   | _, Some ({conn = With ; _} as fr, fcx2) ->
       let f0 = resolve_mpar_ fcx1 f1 fcx2 f2 in
       let u1 = go_top (subst fcx1 (unmark f1)) in
       let dist f = conn Par [u1 ; f] in
       let fr = { fr with
-        left = List.map dist fr.left ;
-        right = List.map dist fr.right ;
-      } in
+                 left = List.map dist fr.left ;
+                 right = List.map dist fr.right ;
+               } in
       unframe fr f0
   | Some ({conn = Qu (All, x) ; _} as fr, fcx1), _ ->
       let fr = maybe_refresh fr fcx2 f2 in

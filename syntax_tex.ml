@@ -1,8 +1,9 @@
-(******************************************************************************)
-(* Author: Kaustuv Chaudhuri <kaustuv.chaudhuri@inria.fr>                     *)
-(* Copyright (C) 2013  INRIA                                                  *)
-(* See LICENSE for licensing details.                                         *)
-(******************************************************************************)
+(*
+ * Author: Kaustuv Chaudhuri <kaustuv.chaudhuri@inria.fr>
+ * Copyright (C) 2013  Inria (Institut National de Recherche
+ *                     en Informatique et en Automatique)
+ * See LICENSE for licensing details.
+ *)
 
 open Batteries
 open Buffer
@@ -12,59 +13,59 @@ open Syntax
 open Traversal
 
 module Tex = Syntax_fmt.Fmt (struct
-  open Doc
-  (* val i_var    : idt -> doc *)
-  let i_var x = String (Idt.tex_rep x)
-  (* val i_pred   : idt -> doc *)
-  let i_pred x = String ("\\text{\\rmfamily\\slshape " ^ Idt.tex_rep x ^ "}")
-  (* val i_con    : idt -> doc *)
-  let i_con x = String ("\\text{\\sffamily\\slshape " ^ Idt.tex_rep x ^ "}")
+    open Doc
+    (* val i_var    : idt -> doc *)
+    let i_var x = String (Idt.tex_rep x)
+    (* val i_pred   : idt -> doc *)
+    let i_pred x = String ("\\text{\\rmfamily\\slshape " ^ Idt.tex_rep x ^ "}")
+    (* val i_con    : idt -> doc *)
+    let i_con x = String ("\\text{\\sffamily\\slshape " ^ Idt.tex_rep x ^ "}")
 
-  let op_eq = Group (NOBOX, [String " =" ; space 1])
-  let op_neq = Group (NOBOX, [String " \\neq" ; space 1])
+    let op_eq = Group (NOBOX, [String " =" ; space 1])
+    let op_neq = Group (NOBOX, [String " \\neq" ; space 1])
 
-  let op_negate = Group (NOBOX, [String "\\lnot" ; space 1])
+    let op_negate = Group (NOBOX, [String "\\lnot" ; space 1])
 
-  (* val op_tens  : doc *)
-  let op_tens = Group (NOBOX, [String " \\TENS" ; space 1])
-  (* val op_one   : doc *)
-  let op_one = String "\\ONE"
-  (* val op_plus  : doc *)
-  let op_plus = Group (NOBOX, [String " \\PLUS" ; space 1])
-  (* val op_zero  : doc *)
-  let op_zero = String "\\ZERO"
-  (* val op_par   : doc *)
-  let op_par = Group (NOBOX, [String " \\PAR" ; space 1])
-  (* val op_top   : doc *)
-  let op_top = String "\\TOP"
-  (* val op_with  : doc *)
-  let op_with = Group (NOBOX, [String " \\WITH" ; space 1])
-  (* val op_bot   : doc *)
-  let op_bot = String "\\BOT"
-  (* val op_lto   : doc *)
-  let op_lto = Group (NOBOX, [String " \\LTO" ; space 1])
-  (* val op_bang  : doc *)
-  let op_bang = Group (NOBOX, [String "\\BANG" ; space 1])
-  (* val op_qm    : doc *)
-  let op_qm = Group (NOBOX, [String "\\QM" ; space 1])
-  (* val op_quant : quant -> doc *)
-  let op_quant = function
-    | All -> String "\\ALL"
-    | Ex -> String "\\EX"
+    (* val op_tens  : doc *)
+    let op_tens = Group (NOBOX, [String " \\TENS" ; space 1])
+    (* val op_one   : doc *)
+    let op_one = String "\\ONE"
+    (* val op_plus  : doc *)
+    let op_plus = Group (NOBOX, [String " \\PLUS" ; space 1])
+    (* val op_zero  : doc *)
+    let op_zero = String "\\ZERO"
+    (* val op_par   : doc *)
+    let op_par = Group (NOBOX, [String " \\PAR" ; space 1])
+    (* val op_top   : doc *)
+    let op_top = String "\\TOP"
+    (* val op_with  : doc *)
+    let op_with = Group (NOBOX, [String " \\WITH" ; space 1])
+    (* val op_bot   : doc *)
+    let op_bot = String "\\BOT"
+    (* val op_lto   : doc *)
+    let op_lto = Group (NOBOX, [String " \\LTO" ; space 1])
+    (* val op_bang  : doc *)
+    let op_bang = Group (NOBOX, [String "\\BANG" ; space 1])
+    (* val op_qm    : doc *)
+    let op_qm = Group (NOBOX, [String "\\QM" ; space 1])
+    (* val op_quant : quant -> doc *)
+    let op_quant = function
+      | All -> String "\\ALL"
+      | Ex -> String "\\EX"
 
-  (* val src_l    : doc *)
-  let src_l = String "\\src{"
-  (* val src_r    : doc *)
-  let src_r = String "}"
-  (* val snk_l    : doc *)
-  let snk_l = String "\\snk{"
-  (* val snk_r    : doc *)
-  let snk_r = src_r
-  (* val cur_l    : doc *)
-  let cur_l = String "\\cur{"
-  (* val cur_r    : doc *)
-  let cur_r = src_r
-end)
+    (* val src_l    : doc *)
+    let src_l = String "\\src{"
+    (* val src_r    : doc *)
+    let src_r = String "}"
+    (* val snk_l    : doc *)
+    let snk_l = String "\\snk{"
+    (* val snk_r    : doc *)
+    let snk_r = src_r
+    (* val cur_l    : doc *)
+    let cur_l = String "\\cur{"
+    (* val cur_r    : doc *)
+    let cur_r = src_r
+  end)
 
 
 let max_hist = ref 3
@@ -80,8 +81,8 @@ let set_dpi dpi =
   (* let redirect = "" in *)
   let redirect = ">/dev/null 2>&1" in
   wash_command := Printf.sprintf
-    "( cd \"%s\"  && latex '\\nonstopmode\\input wash_form.tex' && dvipng -D %d -T tight -bg transparent -z 9 wash_form.dvi ) %s"
-    pdir dpi redirect ;
+      "( cd \"%s\"  && latex '\\nonstopmode\\input wash_form.tex' && dvipng -D %d -T tight -bg transparent -z 9 wash_form.dvi ) %s"
+      pdir dpi redirect ;
   Log.(log DEBUG "wash_command: %s" !wash_command)
 
 let () = set_dpi 120

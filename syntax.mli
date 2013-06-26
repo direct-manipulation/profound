@@ -1,8 +1,9 @@
-(******************************************************************************)
-(* Author: Kaustuv Chaudhuri <kaustuv.chaudhuri@inria.fr>                     *)
-(* Copyright (C) 2013  INRIA                                                  *)
-(* See LICENSE for licensing details.                                         *)
-(******************************************************************************)
+(*
+ * Author: Kaustuv Chaudhuri <kaustuv.chaudhuri@inria.fr>
+ * Copyright (C) 2013  Inria (Institut National de Recherche
+ *                     en Informatique et en Automatique)
+ * See LICENSE for licensing details.
+ *)
 
 open Batteries
 
@@ -48,16 +49,16 @@ val seq : sub -> sub -> sub
 val unsubst : form -> fcx * form
 val unframe : frame -> form -> form
 
-module Fcx : sig
-  val empty : fcx
-  val cons : frame -> fcx -> fcx
-  val snoc : fcx -> frame -> fcx
-  val front : fcx -> (frame * fcx) option
-  val rear : fcx -> (fcx * frame) option
-  val append : fcx -> fcx -> fcx
-  val to_list : fcx -> frame list
-  val size : fcx -> int
-  val is_empty : fcx -> bool
+module Fcx     : sig
+  val empty    : fcx
+  val cons     : frame -> fcx   -> fcx
+  val snoc     : fcx   -> frame -> fcx
+  val append   : fcx   -> fcx   -> fcx
+  val front    : fcx   -> (frame * fcx) option
+  val rear     : fcx   -> (fcx * frame) option
+  val to_list  : fcx   -> frame list
+  val size     : fcx   -> int
+  val is_empty : fcx   -> bool
 end
 
 val focus : form -> form
@@ -75,19 +76,19 @@ val atom  : sign -> Idt.t -> term list -> form
 val conn  : conn -> form list -> form
 val subst : fcx -> form -> form
 
-val _Tens : form -> form -> form
+val _Tens : form  -> form -> form
 val _One  : form
-val _Plus : form -> form -> form
+val _Plus : form  -> form -> form
 val _Zero : form
-val _Par  : form -> form -> form
+val _Par  : form  -> form -> form
 val _Bot  : form
-val _With : form -> form -> form
+val _With : form  -> form -> form
 val _Top  : form
-val _Lto  : form -> form -> form
+val _Lto  : form  -> form -> form
 val _All  : Idt.t -> form -> form
 val _Ex   : Idt.t -> form -> form
-val _Bang : form -> form
-val _Qm   : form -> form
+val _Bang : form  -> form
+val _Qm   : form  -> form
 
 exception Cannot_mark
 val mark   : mkind -> form -> form

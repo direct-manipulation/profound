@@ -1,8 +1,9 @@
-(******************************************************************************)
-(* Author: Kaustuv Chaudhuri <kaustuv.chaudhuri@inria.fr>                     *)
-(* Copyright (C) 2013  INRIA                                                  *)
-(* See LICENSE for licensing details.                                         *)
-(******************************************************************************)
+(*
+ * Author: Kaustuv Chaudhuri <kaustuv.chaudhuri@inria.fr>
+ * Copyright (C) 2013  Inria (Institut National de Recherche
+ *                     en Informatique et en Automatique)
+ * See LICENSE for licensing details.
+ *)
 
 open Batteries
 open Syntax
@@ -10,8 +11,8 @@ open Syntax
 module Src = Syntax_fmt.Src
 
 type mmode =
-  | Unmarked
-  | Marked
+| Unmarked
+| Marked
 
 type snap = {
   mmode : mmode ;
@@ -53,8 +54,8 @@ let render hi =
   (past, cur, fut)
 
 type action_error =
-  | Cancelled
-  | Invalid of string
+| Cancelled
+| Invalid of string
 exception Action of action_error
 let explain = function
   | Cancelled -> ""
@@ -63,7 +64,7 @@ let explain = function
 let actfail msg = raise (Action (Invalid msg))
 
 let tinker ~fn hi =
-  try 
+  try
     let work = fn hi.work in
     { hi with dirty = true ; work }
   with
@@ -95,13 +96,13 @@ let action_undo = {
     else begin
       match hi.past with
       | p :: past ->
-          { work = p ;
-            dirty = false ;
-            past ;
-            present = p ;
-            future = hi.present :: hi.future }
+        { work = p ;
+          dirty = false ;
+          past ;
+          present = p ;
+          future = hi.present :: hi.future }
       | _ ->
-          actfail "no previous states"
+        actfail "no previous states"
     end
   end }
 
@@ -110,11 +111,11 @@ let action_redo = {
   perform = begin fun hi ->
     begin match hi.future with
     | f :: future ->
-        { work = f ;
-          dirty = false ;
-          past = hi.present :: hi.past ;
-          present = f ;
-          future }
+      { work = f ;
+        dirty = false ;
+        past = hi.present :: hi.past ;
+        present = f ;
+        future }
     | _ -> actfail "no future states"
     end
   end }
@@ -141,7 +142,7 @@ let action_ascend = {
   end ;
   perform = begin fun hi ->
     tinker hi ~fn:begin
-      fun snap -> 
+      fun snap ->
         let form = Traversal.go_up snap.form in
         { snap with form }
     end
@@ -265,8 +266,8 @@ let action_derelict = {
         let (fcx, form) = unsubst snap.form in
         match form with
         | Conn (Qm, [form]) ->
-            let form = subst fcx form in
-            { snap with form }
+          let form = subst fcx form in
+          { snap with form }
         | _ -> assert false
     end
   end }
@@ -285,9 +286,9 @@ let action_contract = {
         let (fcx, fr) =
           begin match Fcx.rear fcx with
           | Some (fcx, ({conn = Par ; right ; _} as fr)) ->
-              (fcx, {fr with right = form :: right})
+            (fcx, {fr with right = form :: right})
           | _ ->
-              (fcx, {conn = Par ; left = [] ; right = [form]})
+            (fcx, {conn = Par ; left = [] ; right = [form]})
           end in
         let fcx = Fcx.snoc fcx fr in
         let form = subst fcx form in
@@ -308,10 +309,10 @@ let action_witness ~read = {
         let (fcx, form) = unsubst snap.form in
         match form with
         | Conn (Qu (Ex, x), [fb]) ->
-            let t = read x (fcx_vars fcx) in
-            let ss = Dot (Shift 0, t)in
-            let form = subst fcx (sub_form ss fb) in
-            { snap with form }
+          let t = read x (fcx_vars fcx) in
+          let ss = Dot (Shift 0, t)in
+          let form = subst fcx (sub_form ss fb) in
+          { snap with form }
         | _ -> assert false
     end
   end }

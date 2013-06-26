@@ -1,8 +1,9 @@
-(******************************************************************************)
-(* Author: Kaustuv Chaudhuri <kaustuv.chaudhuri@inria.fr>                     *)
-(* Copyright (C) 2013  INRIA                                                  *)
-(* See LICENSE for licensing details.                                         *)
-(******************************************************************************)
+(*
+ * Author: Kaustuv Chaudhuri <kaustuv.chaudhuri@inria.fr>
+ * Copyright (C) 2013  Inria (Institut National de Recherche
+ *                     en Informatique et en Automatique)
+ * See LICENSE for licensing details.
+ *)
 
 open Batteries
 
@@ -27,7 +28,8 @@ module type S = sig
 end
 
 module F : S = struct
-  include (FingerTree : module type of FingerTree with type 'a t := 'a FingerTree.t)
+  include (FingerTree : module type of FingerTree
+            with type 'a t := 'a FingerTree.t)
   type 'a cx = 'a FingerTree.t
   let cons x sq = FingerTree.cons sq x
   let front sq =
@@ -38,7 +40,8 @@ module F : S = struct
 end
 
 module D : S = struct
-  include (Deque : module type of Deque with type 'a t := 'a Deque.t)
+  include (Deque : module type of Deque
+            with type 'a t := 'a Deque.t)
   type 'a cx = 'a Deque.t
 end
 

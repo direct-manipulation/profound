@@ -1,15 +1,16 @@
-(******************************************************************************)
-(* Author: Kaustuv Chaudhuri <kaustuv.chaudhuri@inria.fr>                     *)
-(* Copyright (C) 2013  INRIA                                                  *)
-(* See LICENSE for licensing details.                                         *)
-(******************************************************************************)
+(*
+ * Author: Kaustuv Chaudhuri <kaustuv.chaudhuri@inria.fr>
+ * Copyright (C) 2013  Inria (Institut National de Recherche
+ *                     en Informatique et en Automatique)
+ * See LICENSE for licensing details.
+ *)
 
 open Batteries
 open Format
 
 type box =
-    | NOBOX
-    | H | V of int | HV of int | HOV of int
+  | NOBOX
+  | H | V of int | HV of int | HOV of int
 
 type doc =
   | String of string
@@ -102,9 +103,9 @@ let rec is_postfix = function
 
 let rec infix_incompat_for tasc pr asc = function
   | Appl (spr, (Prefix _ | Postfix _))
-      when pr >= spr -> true
+    when pr >= spr -> true
   | Appl (spr, Infix (_, sasc, _))
-      when pr = spr && not (asc = tasc && sasc = tasc) -> true
+    when pr = spr && not (asc = tasc && sasc = tasc) -> true
   | Wrap (Transparent, _, be, _) ->
       infix_incompat_for tasc pr asc be
   | _ -> false
@@ -153,39 +154,39 @@ let rec bracket ~ld ~rd = function
   | Wrap (_, ld1, be, rd1) ->
       delimit ~ld:ld1 ~rd:rd1 (bracket ~ld ~rd be)
   | Appl (prec, appl) -> begin
-    match appl with
-    | Prefix (oprep, be) ->
-        let opd = bracket ~ld ~rd be in
-        Group begin HOV 2, [
-          oprep ;
-          delimit opd ~ld ~rd
-            ~cond:(prec >? be && not (is_prefix be)) ;
-        ] end
-    | Postfix (oprep, be) ->
-        let opd = bracket ~ld ~rd be in
-        Group begin H, [
-          delimit opd ~ld ~rd
-            ~cond:(prec >? be && not (is_postfix be)) ;
-          oprep
-        ] end
-    | Infix (oprep, asc, l :: es) ->
-        let (ms, r) = List.split_at (List.length es - 1) es in
-        assert (r <> []) ;
-        let r = List.hd r in
-        let l = delimit (bracket ~ld ~rd l) ~ld ~rd
-          ~cond:(prec >? l
-                 || infix_incompat_for Left prec asc l) in
-        let r = delimit (bracket ~ld ~rd r) ~ld ~rd
-          ~cond:(prec >? r
-                 || infix_incompat_for Right prec asc r) in
-        let ms = List.map
-          begin fun e ->
-            [oprep ; delimit (bracket ~ld ~rd e) ~ld ~rd ~cond:(prec >? e)]
-          end ms in
-        let ms = List.concat ms in
-        Group (HOV 0, l :: ms @ [oprep ; r])
-    | Infix (_, _, []) -> invalid_arg "bracket"
-  end
+      match appl with
+      | Prefix (oprep, be) ->
+          let opd = bracket ~ld ~rd be in
+          Group begin HOV 2, [
+              oprep ;
+              delimit opd ~ld ~rd
+                ~cond:(prec >? be && not (is_prefix be)) ;
+            ] end
+      | Postfix (oprep, be) ->
+          let opd = bracket ~ld ~rd be in
+          Group begin H, [
+              delimit opd ~ld ~rd
+                ~cond:(prec >? be && not (is_postfix be)) ;
+              oprep
+            ] end
+      | Infix (oprep, asc, l :: es) ->
+          let (ms, r) = List.split_at (List.length es - 1) es in
+          assert (r <> []) ;
+          let r = List.hd r in
+          let l = delimit (bracket ~ld ~rd l) ~ld ~rd
+              ~cond:(prec >? l
+                     || infix_incompat_for Left prec asc l) in
+          let r = delimit (bracket ~ld ~rd r) ~ld ~rd
+              ~cond:(prec >? r
+                     || infix_incompat_for Right prec asc r) in
+          let ms = List.map
+              begin fun e ->
+                [oprep ; delimit (bracket ~ld ~rd e) ~ld ~rd ~cond:(prec >? e)]
+              end ms in
+          let ms = List.concat ms in
+          Group (HOV 0, l :: ms @ [oprep ; r])
+      | Infix (_, _, []) -> invalid_arg "bracket"
+    end
 
 let bracket ?(ld = String "(") ?(rd = String ")") e =
   let (e, _) = reprec e in

@@ -1,8 +1,9 @@
-(******************************************************************************)
-(* Author: Kaustuv Chaudhuri <kaustuv.chaudhuri@inria.fr>                     *)
-(* Copyright (C) 2013  INRIA                                                  *)
-(* See LICENSE for licensing details.                                         *)
-(******************************************************************************)
+(*
+ * Author: Kaustuv Chaudhuri <kaustuv.chaudhuri@inria.fr>
+ * Copyright (C) 2013  Inria (Institut National de Recherche
+ *                     en Informatique et en Automatique)
+ * See LICENSE for licensing details.
+ *)
 
 open Batteries
 
@@ -48,13 +49,13 @@ let parse_opts () =
     "-log", String Log.to_file, "<file> Log output to file (default: stdout)" ;
     "-hist-lines", Int set_max_hist, "<num> Set the number of history lines to display to <num>" ;
     "-version", Unit (fun () ->
-      Printf.printf "Profound %s [build of %s]\n" Version.str Version.built ;
-      exit 0
-    ), " Display a version string" ;
+        Printf.printf "Profound %s [build of %s]\n" Version.str Version.built ;
+        exit 0
+      ), " Display a version string" ;
     "-vnum", Unit (fun () ->
-      Printf.printf "%s%!" Version.str ;
-      exit 0
-    ), " Display a version number (no newline at end)" ;
+        Printf.printf "%s%!" Version.str ;
+        exit 0
+      ), " Display a version number (no newline at end)" ;
   ] in
   let opts = align opts in
   let umsg = "Usage: profound [options] (theorem | -i file)" in
@@ -68,22 +69,22 @@ let parse_opts () =
   in
   parse opts add_txt umsg ;
   try begin match !infile, !imm_txt with
-  | _, Some txt ->
-      if Option.is_some !infile then
-        Log.(log ERROR "Ignoring input file %S" (Option.get !infile)) ;
-      Gui.Imm (Syntax_io.form_of_string [] txt)
-  | Some fin, None ->
-      Gui.File (fin, Syntax_io.load_file fin)
-  | None, None ->
-      Log.eprintf "Need an input file or theorem" ;
-      Arg.usage opts umsg ;
-      exit 1
+    | _, Some txt ->
+        if Option.is_some !infile then
+          Log.(log ERROR "Ignoring input file %S" (Option.get !infile)) ;
+        Gui.Imm (Syntax_io.form_of_string [] txt)
+    | Some fin, None ->
+        Gui.File (fin, Syntax_io.load_file fin)
+    | None, None ->
+        Log.eprintf "Need an input file or theorem" ;
+        Arg.usage opts umsg ;
+        exit 1
   end with
   | Syntax_io.Parsing msg ->
       if msg = "" then Log.eprintf "Parsing error"
       else Log.eprintf "Parsing error: %s" msg ;
       exit 1
-        
+
 let main () =
   Log.to_stdout () ;
   Log.(log INFO "Profound %s [%s] START" Version.str Version.built) ;

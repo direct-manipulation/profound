@@ -1,8 +1,9 @@
-(******************************************************************************)
-(* Author: Kaustuv Chaudhuri <kaustuv.chaudhuri@inria.fr>                     *)
-(* Copyright (C) 2013  INRIA                                                  *)
-(* See LICENSE for licensing details.                                         *)
-(******************************************************************************)
+(*
+ * Author: Kaustuv Chaudhuri <kaustuv.chaudhuri@inria.fr>
+ * Copyright (C) 2013  Inria (Institut National de Recherche
+ *                     en Informatique et en Automatique)
+ * See LICENSE for licensing details.
+ *)
 
 open Ocamlbuild_plugin ;;
 
@@ -11,7 +12,7 @@ let minor = 4
 let patch = 1
 let tag   = ""
 
-(*********************************************************************************)
+(******************************************************************************)
 
 (* sanity checks on versions *)
 let major = max 0 major
@@ -51,12 +52,12 @@ let _ =
     make_version "initial"
   ) ;
   dispatch begin function
-   | After_rules ->
-       if !need_to_make_version then make_version "recompilation" ;
-       flag ["ocaml" ; "menhir"] (S [A "--explain" (* ; A "--strict" *)]) ;
-       flag ["ocaml" ; "compile"] (A "-annot") ;
-       flag ["ocaml" ; "compile"] (A "-g") ;
-       flag ["ocaml" ; "compile"] (S [A "-w" ; A "@3@5@6@8..12@14@20@26@28@29"]) ;
-       flag ["ocaml" ; "native" ; "compile"] (A "-nodynlink") ;
-   | _ -> ()
-end
+  | After_rules ->
+      if !need_to_make_version then make_version "recompilation" ;
+      flag ["ocaml" ; "menhir"] (S [A "--explain" (* ; A "--strict" *)]) ;
+      flag ["ocaml" ; "compile"] (A "-annot") ;
+      flag ["ocaml" ; "compile"] (A "-g") ;
+      flag ["ocaml" ; "compile"] (S [A "-w" ; A "@3@5@6@8..12@14@20@26@28@29"]) ;
+      flag ["ocaml" ; "native" ; "compile"] (A "-nodynlink") ;
+  | _ -> ()
+  end

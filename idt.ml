@@ -1,8 +1,9 @@
-(******************************************************************************)
-(* Author: Kaustuv Chaudhuri <kaustuv.chaudhuri@inria.fr>                     *)
-(* Copyright (C) 2013  INRIA                                                  *)
-(* See LICENSE for licensing details.                                         *)
-(******************************************************************************)
+(*
+ * Author: Kaustuv Chaudhuri <kaustuv.chaudhuri@inria.fr>
+ * Copyright (C) 2013  Inria (Institut National de Recherche
+ *                     en Informatique et en Automatique)
+ * See LICENSE for licensing details.
+ *)
 
 open Batteries
 
@@ -20,7 +21,7 @@ module WeakT = Weak.Make (
     let hash : t -> int = Hashtbl.hash
     let equal : t -> t -> bool = Pervasives.(=)
   end
-)
+  )
 
 let _stab : WeakT.t = WeakT.create 19
 

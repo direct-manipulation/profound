@@ -1,8 +1,9 @@
-(******************************************************************************)
-(* Author: Kaustuv Chaudhuri <kaustuv.chaudhuri@inria.fr>                     *)
-(* Copyright (C) 2013  INRIA                                                  *)
-(* See LICENSE for licensing details.                                         *)
-(******************************************************************************)
+(*
+ * Author: Kaustuv Chaudhuri <kaustuv.chaudhuri@inria.fr>
+ * Copyright (C) 2013  Inria (Institut National de Recherche
+ *                     en Informatique et en Automatique)
+ * See LICENSE for licensing details.
+ *)
 
 open Batteries
 
@@ -45,9 +46,9 @@ let reset () =
   logging := false ;
   logdest := stdout ;
   Map.iter (fun nm ch ->
-    log ~force:stdout TRACE "Closing %S" nm ;
-    close_out ch
-  ) !file_channels ;
+      log ~force:stdout TRACE "Closing %S" nm ;
+      close_out ch
+    ) !file_channels ;
   file_channels := Map.empty
 
 let to_stdout () =

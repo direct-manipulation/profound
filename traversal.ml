@@ -1,8 +1,10 @@
-(******************************************************************************)
-(* Author: Kaustuv Chaudhuri <kaustuv.chaudhuri@inria.fr>                     *)
-(* Copyright (C) 2013  INRIA                                                  *)
-(* See LICENSE for licensing details.                                         *)
-(******************************************************************************)
+(*
+ * Author: Kaustuv Chaudhuri <kaustuv.chaudhuri@inria.fr>
+ * Copyright (C) 2013  Inria (Institut National de Recherche
+ *                     en Informatique et en Automatique)
+ * See LICENSE for licensing details.
+ *)
+
 open Batteries
 open Log
 
@@ -76,9 +78,9 @@ let go_left f =
       begin match fr.left with
       | lf :: lfs ->
           let fr = { fr with
-            left = lfs ;
-            right = f :: fr.right ;
-          } in
+                     left = lfs ;
+                     right = f :: fr.right ;
+                   } in
           let fcx = Fcx.snoc fcx fr in
           subst fcx lf
       | [] -> travfail At_edge
@@ -93,15 +95,15 @@ let go_right f =
       begin match fr.right with
       | rf :: rfs ->
           let fr = { fr with
-            right = rfs ;
-            left = f :: fr.left ;
-          } in
+                     right = rfs ;
+                     left = f :: fr.left ;
+                   } in
           let fcx = Fcx.snoc fcx fr in
           subst fcx rf
       | [] -> travfail At_edge
       end
   | None -> travfail At_edge
- end
+  end
 
 type trail = int list
 

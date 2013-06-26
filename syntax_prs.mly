@@ -1,8 +1,10 @@
-(******************************************************************************)
-(* Author: Kaustuv Chaudhuri <kaustuv.chaudhuri@inria.fr>                     *)
-(* Copyright (C) 2013  INRIA                                                  *)
-(* See LICENSE for licensing details.                                         *)
-(******************************************************************************)
+(*
+ * Author: Kaustuv Chaudhuri <kaustuv.chaudhuri@inria.fr>
+ * Copyright (C) 2013  Inria (Institut National de Recherche
+ *                     en Informatique et en Automatique)
+ * See LICENSE for licensing details.
+ *)
+
 %{
   let rec make_quant q vs f =
     begin match vs with
@@ -84,4 +86,3 @@ one_form:
 
 %inline vars:
 | vs = separated_nonempty_list (COMMA, IDENT) { vs }
-

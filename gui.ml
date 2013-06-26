@@ -1,8 +1,9 @@
-(******************************************************************************)
-(* Author: Kaustuv Chaudhuri <kaustuv.chaudhuri@inria.fr>                     *)
-(* Copyright (C) 2013  INRIA                                                  *)
-(* See LICENSE for licensing details.                                         *)
-(******************************************************************************)
+(*
+ * Author: Kaustuv Chaudhuri <kaustuv.chaudhuri@inria.fr>
+ * Copyright (C) 2013  Inria (Institut National de Recherche
+ *                     en Informatique et en Automatique)
+ * See LICENSE for licensing details.
+ *)
 
 open Batteries
 open Syntax
@@ -21,16 +22,16 @@ module Run (Param : Param) =
 struct
 
   let state = ref (
-    match Param.mode with
-    | Imm f -> Action.init f
-    | File (fin, hi) -> hi
-  )
+      match Param.mode with
+      | Imm f -> Action.init f
+      | File (fin, hi) -> hi
+    )
 
   let main_win =
     let win = GWindow.window
-      ~title:"Profound"
-      ~border_width:3
-      ~deletable:true () in
+        ~title:"Profound"
+        ~border_width:3
+        ~deletable:true () in
     let sw = Gdk.Screen.width () in
     let sh = Gdk.Screen.height () in
     (* [HACK] *)
@@ -52,42 +53,42 @@ struct
   let (disp, stat) =
     let box = GPack.vbox ~packing:main_win#add () in
     let sw = GBin.scrolled_window
-      ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC
-      ~packing:box#add () in
+        ~hpolicy:`AUTOMATIC ~vpolicy:`AUTOMATIC
+        ~packing:box#add () in
     let disp = GMisc.image
-      ~packing:sw#add_with_viewport () in
+        ~packing:sw#add_with_viewport () in
     ignore (GMisc.separator `HORIZONTAL ~packing:(box#pack ~expand:false) ()) ;
     let sbar = GMisc.statusbar
-      ~packing:(box#pack ~expand:false) () in
+        ~packing:(box#pack ~expand:false) () in
     let stat = sbar#new_context ~name:"default" in
     (disp, stat)
 
   let flash fmt =
     Printf.ksprintf (fun txt ->
-      if not !awaiting_quit then
-        stat#flash ~delay:2000 txt
-    ) fmt
+        if not !awaiting_quit then
+          stat#flash ~delay:2000 txt
+      ) fmt
 
   let read_thing ~title ~label ~parse =
     let dwin = GWindow.dialog
-      ~parent:main_win ~title
-      ~modal:true
-      ~position:`CENTER_ON_PARENT
-      () in
+        ~parent:main_win ~title
+        ~modal:true
+        ~position:`CENTER_ON_PARENT
+        () in
     dwin#vbox#misc#set_size_request ~width:300 () ;
     dwin#add_button_stock `OK `OK ;
     dwin#add_button_stock `CANCEL `CANCEL ;
     dwin#set_default_response `CANCEL ;
     let _lab = GMisc.label
-      ~xalign:0.
-      ~packing:(dwin#vbox#pack ~expand:false)
-      ~text:label
-      () in
+        ~xalign:0.
+        ~packing:(dwin#vbox#pack ~expand:false)
+        ~text:label
+        () in
     let ebox = GEdit.entry
-      ~text:""
-      ~width:80
-      ~packing:(dwin#vbox#pack ~expand:true)
-      () in
+        ~text:""
+        ~width:80
+        ~packing:(dwin#vbox#pack ~expand:true)
+        () in
     ebox#misc#grab_focus () ;
     let handler key =
       begin
@@ -110,7 +111,7 @@ struct
         end
     | _ ->
         raise Action.(Action Cancelled)
-    end      
+    end
 
   let read_term x cx =
     let title = "Term input" in
@@ -149,109 +150,109 @@ struct
 
   let (klist, kmap) =
     Action.(GdkKeysyms.(
-      let c = true in
-      let s = true in
-      let klist = ref [] in
-      let kmap = ref Map.empty in
-      let add ?(e = false) ?(c = false) ?(s = false) code ad =
-        let key = { code ; c ; s } in
-        if ad.desc <> "" then klist := ad :: !klist ;
-        kmap := add_action !kmap key ad
-      in
-      add _Down      { action = action_descend
-                     ; desc   = ""                     } ;
-      add _Up        { action = action_ascend
-                     ; desc   = ""                     } ;
-      add ~s _Up     { action = action_ascend_to_top
-                     ; desc   = ""                     } ;
-      add _Left      { action = action_left
-                     ; desc   = ""                     } ;
-      add _Right     { action = action_right
-                     ; desc   = ""                     } ;
-      add _Return    { action = action_mark_source
-                     ; desc   = "Enter=mark"           } ;
-      add _Return    { action = action_unmark_source
-                     ; desc   = "Enter=unmark"         } ;
-      add _Return    { action = action_complete_link
-                     ; desc   = "Enter=link"           } ;
-      add _Escape    { action = action_reset
-                     ; desc   = "Esc=reset"            } ;
-      add _Delete    { action = action_zero
-                     ; desc   = "Del=kill"             } ;
-      add ~s _Delete { action = action_weaken
-                     ; desc   = "Shift-Del=weaken"     } ;
-      add ~s _Return { action = action_contract
-                     ; desc   = "Shift-Enter=contract" } ;
-      add ~s _question { action = action_derelict
-                       ; desc = "?=derelict"           } ;
-      add ~s _Return { action = action_witness ~read:read_term
-                     ; desc   = "Shift-Enter=witness"  } ;
-      add ~c _Return { action = action_cut ~read:read_form
-                     ; desc   = "^Enter=cut"           } ;
-      add ~c _z      { action = action_undo
-                     ; desc   = "^Z=undo"              } ;
-      add ~c _Down   { action = action_undo
-                     ; desc   = ""                     } ;
-      add ~c _y      { action = action_redo
-                     ; desc   = "^Y=redo"              } ;
-      add ~c ~s _Z   { action = action_redo
-                     ; desc   = ""                     } ;
-      add ~c _Up     { action = action_redo
-                     ; desc   = ""                     } ;
-      let action_more_history = {
-        enabled = (fun _ -> true) ;
-        perform = (fun hi ->
-          incr Syntax_tex.max_hist ;
-          Log.(log INFO "Now showing %d history line(s)" !Syntax_tex.max_hist) ;
-          hi
-        ) } in
-      add ~s _plus   { action = action_more_history
-                     ; desc   = ""                     } ;
-      let action_less_history = {
-        enabled = (fun _ -> !Syntax_tex.max_hist >= 1) ;
-        perform = (fun hi ->
-          decr Syntax_tex.max_hist ;
-          Log.(log INFO "Now showing %d history line(s)" !Syntax_tex.max_hist) ;
-          hi
-        ) } in
-      add _minus     { action = action_less_history
-                     ; desc   = ""                     } ;
-      begin match Param.mode with
-      | Imm _ ->
-          let action_quit = {
-            enabled = (fun _ -> true) ;
-            perform = (fun _ -> quit ()) ;
-          } in
-          add ~c _q { action = action_quit ; desc = "" }
-      | File (fin, _) ->
-          let action_quit = {
-            enabled = (fun _ -> true) ;
-            perform = begin fun hi ->
-              Syntax_io.save_file fin hi ;
-              quit ()
-            end
-          } in
-          add ~c _q { action = action_quit ; desc   = "" } ;
-          let action_save = {
-            enabled = (fun _ -> true) ;
-            perform = begin fun hi ->
-              Syntax_io.save_file fin hi ;
+        let c = true in
+        let s = true in
+        let klist = ref [] in
+        let kmap = ref Map.empty in
+        let add ?(e = false) ?(c = false) ?(s = false) code ad =
+          let key = { code ; c ; s } in
+          if ad.desc <> "" then klist := ad :: !klist ;
+          kmap := add_action !kmap key ad
+        in
+        add _Down      { action = action_descend
+                       ; desc   = ""                     } ;
+        add _Up        { action = action_ascend
+                       ; desc   = ""                     } ;
+        add ~s _Up     { action = action_ascend_to_top
+                       ; desc   = ""                     } ;
+        add _Left      { action = action_left
+                       ; desc   = ""                     } ;
+        add _Right     { action = action_right
+                       ; desc   = ""                     } ;
+        add _Return    { action = action_mark_source
+                       ; desc   = "Enter=mark"           } ;
+        add _Return    { action = action_unmark_source
+                       ; desc   = "Enter=unmark"         } ;
+        add _Return    { action = action_complete_link
+                       ; desc   = "Enter=link"           } ;
+        add _Escape    { action = action_reset
+                       ; desc   = "Esc=reset"            } ;
+        add _Delete    { action = action_zero
+                       ; desc   = "Del=kill"             } ;
+        add ~s _Delete { action = action_weaken
+                       ; desc   = "Shift-Del=weaken"     } ;
+        add ~s _Return { action = action_contract
+                       ; desc   = "Shift-Enter=contract" } ;
+        add ~s _question { action = action_derelict
+                         ; desc = "?=derelict"           } ;
+        add ~s _Return { action = action_witness ~read:read_term
+                       ; desc   = "Shift-Enter=witness"  } ;
+        add ~c _Return { action = action_cut ~read:read_form
+                       ; desc   = "^Enter=cut"           } ;
+        add ~c _z      { action = action_undo
+                       ; desc   = "^Z=undo"              } ;
+        add ~c _Down   { action = action_undo
+                       ; desc   = ""                     } ;
+        add ~c _y      { action = action_redo
+                       ; desc   = "^Y=redo"              } ;
+        add ~c ~s _Z   { action = action_redo
+                       ; desc   = ""                     } ;
+        add ~c _Up     { action = action_redo
+                       ; desc   = ""                     } ;
+        let action_more_history = {
+          enabled = (fun _ -> true) ;
+          perform = (fun hi ->
+              incr Syntax_tex.max_hist ;
+              Log.(log INFO "Now showing %d history line(s)" !Syntax_tex.max_hist) ;
               hi
-            end
-          } in
-          add ~c _s { action = action_save ; desc = "" }
-      end ;
-      (List.rev !klist, !kmap)
-    ))
+            ) } in
+        add ~s _plus   { action = action_more_history
+                       ; desc   = ""                     } ;
+        let action_less_history = {
+          enabled = (fun _ -> !Syntax_tex.max_hist >= 1) ;
+          perform = (fun hi ->
+              decr Syntax_tex.max_hist ;
+              Log.(log INFO "Now showing %d history line(s)" !Syntax_tex.max_hist) ;
+              hi
+            ) } in
+        add _minus     { action = action_less_history
+                       ; desc   = ""                     } ;
+        begin match Param.mode with
+        | Imm _ ->
+            let action_quit = {
+              enabled = (fun _ -> true) ;
+              perform = (fun _ -> quit ()) ;
+            } in
+            add ~c _q { action = action_quit ; desc = "" }
+        | File (fin, _) ->
+            let action_quit = {
+              enabled = (fun _ -> true) ;
+              perform = begin fun hi ->
+                Syntax_io.save_file fin hi ;
+                quit ()
+              end
+            } in
+            add ~c _q { action = action_quit ; desc   = "" } ;
+            let action_save = {
+              enabled = (fun _ -> true) ;
+              perform = begin fun hi ->
+                Syntax_io.save_file fin hi ;
+                hi
+              end
+            } in
+            add ~c _s { action = action_save ; desc = "" }
+        end ;
+        (List.rev !klist, !kmap)
+      ))
 
   exception Handled
 
   let explain_keys () =
     let buf = Buffer.create 19 in
     List.iter begin function
-      | {desc ; action} when desc <> "" && action.Action.enabled !state  -> 
-          Buffer.add_string buf (desc ^ "; ")
-      | _ -> ()
+    | {desc ; action} when desc <> "" && action.Action.enabled !state  ->
+        Buffer.add_string buf (desc ^ "; ")
+    | _ -> ()
     end klist ;
     Buffer.add_string buf "^Q quit" ;
     Buffer.contents buf
@@ -289,7 +290,7 @@ struct
           end ads ;
           false
         ) with
-        | Action.Action err -> 
+        | Action.Action err ->
             Log.(log DEBUG "Action error: %s" (Action.explain err)) ;
             true
         | Handled -> true

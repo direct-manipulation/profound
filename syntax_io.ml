@@ -1,8 +1,9 @@
-(******************************************************************************)
-(* Author: Kaustuv Chaudhuri <kaustuv.chaudhuri@inria.fr>                     *)
-(* Copyright (C) 2013  INRIA                                                  *)
-(* See LICENSE for licensing details.                                         *)
-(******************************************************************************)
+(*
+ * Author: Kaustuv Chaudhuri <kaustuv.chaudhuri@inria.fr>
+ * Copyright (C) 2013  Inria (Institut National de Recherche
+ *                     en Informatique et en Automatique)
+ * See LICENSE for licensing details.
+ *)
 
 open Batteries
 
@@ -67,7 +68,7 @@ let parse_file f =
     let f = Syntax_prs.one_form Syntax_lex.token lb in
     close_in ch ;
     index_form [] f
-  with 
+  with
   | Sys_error _ -> raise (Parsing (Printf.sprintf "could not read %S" f))
   | Not_first_order -> raise (Parsing "variables cannot have arguments")
   | Syntax_prs.Error -> raise (Parsing  "parsing error")
@@ -100,16 +101,16 @@ let load_file fin =
       end ;
       let hi = Marshal.from_channel mch in
       close_in mch ;
-        (* if not (Action.is_history_of hi f) then begin *)
-        (*   Log.(log DEBUG "History in %S does not match %S" saven fin) ; *)
-        (*   raise Save_invalid *)
-        (* end ; *)
+      (* if not (Action.is_history_of hi f) then begin *)
+      (*   Log.(log DEBUG "History in %S does not match %S" saven fin) ; *)
+      (*   raise Save_invalid *)
+      (* end ; *)
       Log.(log INFO "Saved state of %S loaded from %S" fin saven) ;
       hi
     with Save_invalid ->
-      Log.(log DEBUG "Could not reload state of %S" fin) ;
-      Log.(log DEBUG "   from %S" saven) ;
-      Action.init f
+        Log.(log DEBUG "Could not reload state of %S" fin) ;
+        Log.(log DEBUG "   from %S" saven) ;
+        Action.init f
   end else begin
     Log.(log DEBUG "Save file %S does not exist or is older than %S" saven fin) ;
     Action.init f

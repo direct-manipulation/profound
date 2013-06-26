@@ -1,8 +1,9 @@
-(******************************************************************************)
-(* Author: Kaustuv Chaudhuri <kaustuv.chaudhuri@inria.fr>                     *)
-(* Copyright (C) 2013  INRIA                                                  *)
-(* See LICENSE for licensing details.                                         *)
-(******************************************************************************)
+(*
+ * Author: Kaustuv Chaudhuri <kaustuv.chaudhuri@inria.fr>
+ * Copyright (C) 2013  Inria (Institut National de Recherche
+ *                     en Informatique et en Automatique)
+ * See LICENSE for licensing details.
+ *)
 
 open Batteries
 
@@ -101,18 +102,18 @@ let monoid_normalize ?spec c un f g =
   if f = un then g
   else if g = un then f
   else begin match f, g with
-  | Conn (c1, fs), Conn (c2, gs) when c1 = c && c2 = c ->
-      Conn (c, fs @ gs)
-  | Conn (c1, fs), _ when c1 = c ->
-      Conn (c, fs @ [g])
-  | f, Conn (c2, gs) when c2 = c ->
-      Conn (c, f :: gs)
-  | _ ->
-      begin match spec with
-      | Some spec ->
-          (try spec f g with No_spec -> Conn (c, [f ; g]))
-      | None -> Conn (c, [f ; g])
-      end
+    | Conn (c1, fs), Conn (c2, gs) when c1 = c && c2 = c ->
+        Conn (c, fs @ gs)
+    | Conn (c1, fs), _ when c1 = c ->
+        Conn (c, fs @ [g])
+    | f, Conn (c2, gs) when c2 = c ->
+        Conn (c, f :: gs)
+    | _ ->
+        begin match spec with
+        | Some spec ->
+            (try spec f g with No_spec -> Conn (c, [f ; g]))
+        | None -> Conn (c, [f ; g])
+        end
   end
 
 let rec _Tens f g = monoid_normalize Tens _One f g
@@ -213,7 +214,7 @@ and has_mark_fcx ?m fcx =
   | None -> false
   end
 
-let mark m f = 
+let mark m f =
   if has_mark ~m f then raise Cannot_mark ;
   Mark (m, f)
 
@@ -246,9 +247,9 @@ module Fcx = struct
     begin match Cx.front fcx with
     | Some (hfr, fcx) when hfr.conn = fr.conn ->
         let fr = { fr with
-          left = hfr.left @ fr.left ;
-          right = hfr.right @ fr.right ;
-        } in
+                   left = hfr.left @ fr.left ;
+                   right = hfr.right @ fr.right ;
+                 } in
         Cx.cons fr fcx
     | _ -> Cx.cons fr fcx
     end
@@ -257,9 +258,9 @@ module Fcx = struct
     begin match Cx.rear fcx with
     | Some (fcx, rfr) when rfr.conn = fr.conn ->
         let fr = { rfr with
-          left = fr.left @ rfr.left ;
-          right = fr.right @ rfr.right ;
-        } in
+                   left = fr.left @ rfr.left ;
+                   right = fr.right @ rfr.right ;
+                 } in
         Cx.snoc fcx fr
     | _ -> Cx.snoc fcx fr
     end
@@ -323,14 +324,14 @@ and sub_fcx ss fcx =
   begin match Cx.front fcx with
   | Some ({ conn = Qu (q, x) ; _ } as fr, fcx) ->
       let (fcx, ss) = sub_fcx (bump ss) fcx in
-      let x = maybe_refresh_fcx x fcx in 
+      let x = maybe_refresh_fcx x fcx in
       let fr = { fr with conn = Qu (q, x) } in
       (Cx.cons fr fcx, ss)
   | Some (fr, fcx) ->
       let fr = { fr with
-        left = List.map (sub_form ss) fr.left ;
-        right = List.map (sub_form ss) fr.right ;
-      } in
+                 left = List.map (sub_form ss) fr.left ;
+                 right = List.map (sub_form ss) fr.right ;
+               } in
       let (fcx, ss) = sub_fcx ss fcx in
       (Cx.cons fr fcx, ss)
   | None ->
@@ -375,7 +376,7 @@ and var_occurs x f =
       p = x
       || List.exists (test_term (identifier_is_free x)) ts
   end
-    
+
 and var_occurs_fcx x fcx =
   begin match Cx.front fcx with
   | None -> false
@@ -389,7 +390,7 @@ and var_occurs_fcx x fcx =
 
 and identifier_is_free x ~dep = function
   | App (f, _) -> x = f
-  | _ -> false  
+  | _ -> false
 
 let rec fcx_vars fcx =
   begin match Cx.rear fcx with
@@ -444,29 +445,29 @@ let rec aeq_forms f1 f2 =
   | _ -> false
   end
 
- let rec negate f =
-   match f with
-   | Conn (Lto, fs) ->
-       let (fs, g) = begin match List.rev fs with
-       | g :: fs -> (List.rev fs, g)
-       | _ -> assert false
-       end in
-       conn Tens (fs @ [negate g])
-   | Conn (c, fs) ->
-       conn (negate_conn c) (List.map negate fs)
-   | Atom (s, p, ts) ->
-       atom (negate_sign s) p ts
-   | Mark _
-   | Subst _ ->
-       assert false
+let rec negate f =
+  match f with
+  | Conn (Lto, fs) ->
+      let (fs, g) = begin match List.rev fs with
+        | g :: fs -> (List.rev fs, g)
+        | _ -> assert false
+      end in
+      conn Tens (fs @ [negate g])
+  | Conn (c, fs) ->
+      conn (negate_conn c) (List.map negate fs)
+  | Atom (s, p, ts) ->
+      atom (negate_sign s) p ts
+  | Mark _
+  | Subst _ ->
+      assert false
 
- and negate_conn = function
-   | Tens -> Par | Plus -> With
-   | Par -> Tens | With -> Plus
-   | Bang -> Qm | Qm -> Bang
-   | Qu (All, x) -> Qu (Ex, x)
-   | Qu (Ex, x) -> Qu (All, x)
-   | Lto -> assert false
+and negate_conn = function
+  | Tens -> Par | Plus -> With
+  | Par -> Tens | With -> Plus
+  | Bang -> Qm | Qm -> Bang
+  | Qu (All, x) -> Qu (Ex, x)
+  | Qu (Ex, x) -> Qu (All, x)
+  | Lto -> assert false
 
- and negate_sign = function
-   | ASSERT -> REFUTE | REFUTE -> ASSERT
+and negate_sign = function
+  | ASSERT -> REFUTE | REFUTE -> ASSERT

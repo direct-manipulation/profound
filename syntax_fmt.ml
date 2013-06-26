@@ -1,8 +1,10 @@
-(******************************************************************************)
-(* Author: Kaustuv Chaudhuri <kaustuv.chaudhuri@inria.fr>                     *)
-(* Copyright (C) 2013  INRIA                                                  *)
-(* See LICENSE for licensing details.                                         *)
-(******************************************************************************)
+(*
+ * Author: Kaustuv Chaudhuri <kaustuv.chaudhuri@inria.fr>
+ * Copyright (C) 2013  Inria (Institut National de Recherche
+ *                     en Informatique et en Automatique)
+ * See LICENSE for licensing details.
+ *)
+
 
 open Batteries
 open Buffer
@@ -33,7 +35,7 @@ let explain = function
   | Must_be_unary -> "connective msut be unary"
 exception Fmt_failure of fmt_error
 let fmtfail err = raise (Fmt_failure err)
-    
+
 
 let rec monoid ~conn ?un ~prec ~assoc es =
   begin match es with
@@ -99,10 +101,10 @@ struct
     | [] -> f
     | ts ->
         Doc.(Group begin HOV 1,
-          List.concat [ [f ; space 1 ; String "("]
-                      ; comma_list ts
-                      ; [String ")"] ]
-        end)
+                         List.concat [ [f ; space 1 ; String "("]
+                                     ; comma_list ts
+                                     ; [String ")"] ]
+             end)
     end
 
   let rec fmt_term cx t =
@@ -164,9 +166,9 @@ struct
         Doc.(Appl (!!PREC_MAX, Prefix (op_qm, fmt_form cx f)))
     | Conn (Qu (q, x), [f]) ->
         let q = Doc.(Group (NOBOX, [
-          op_quant q ; space 1 ;
-          i_var x ; String "." ; space 1 ;
-        ])) in
+            op_quant q ; space 1 ;
+            i_var x ; String "." ; space 1 ;
+          ])) in
         Doc.(Appl (!!PREC_MIN, Prefix (q, fmt_form (x :: cx) f)))
     | Mark (m, f) ->
         let (ld, rd) =
@@ -196,56 +198,56 @@ end
 
 
 module Src = Fmt (struct
-  open Doc
-  (* val i_var    : idt -> doc *)
-  let i_var x = String (Idt.src_rep x)
-  (* val i_pred   : idt -> doc *)
-  (* val i_con    : idt -> doc *)
-  let i_pred = i_var
-  let i_con = i_var
+    open Doc
+    (* val i_var    : idt -> doc *)
+    let i_var x = String (Idt.src_rep x)
+    (* val i_pred   : idt -> doc *)
+    (* val i_con    : idt -> doc *)
+    let i_pred = i_var
+    let i_con = i_var
 
-  let op_eq = Group (NOBOX, [String " =" ; space 1])
-  let op_neq = Group (NOBOX, [String " <>" ; space 1])
+    let op_eq = Group (NOBOX, [String " =" ; space 1])
+    let op_neq = Group (NOBOX, [String " <>" ; space 1])
 
-  let op_negate = Group (NOBOX, [String "~" ; space 1])
+    let op_negate = Group (NOBOX, [String "~" ; space 1])
 
-  (* val op_tens  : doc *)
-  let op_tens = Group (NOBOX, [String " *" ; space 1])
-  (* val op_one   : doc *)
-  let op_one = String "1"
-  (* val op_plus  : doc *)
-  let op_plus = Group (NOBOX, [String " +" ; space 1])
-  (* val op_zero  : doc *)
-  let op_zero = String "0"
-  (* val op_par   : doc *)
-  let op_par = Group (NOBOX, [String " |" ; space 1])
-  (* val op_top   : doc *)
-  let op_top = String "#T"
-  (* val op_with  : doc *)
-  let op_with = Group (NOBOX, [String " &" ; space 1])
-  (* val op_bot   : doc *)
-  let op_bot = String "#F"
-  (* val op_lto   : doc *)
-  let op_lto = Group (NOBOX, [String " -o" ; space 1])
-  (* val op_bang  : doc *)
-  let op_bang = String "!"
-  (* val op_qm    : doc *)
-  let op_qm = String "?"
-  (* val op_quant : quant -> doc *)
-  let op_quant = function
-    | All -> String "\\A"
-    | Ex -> String "\\E"
+    (* val op_tens  : doc *)
+    let op_tens = Group (NOBOX, [String " *" ; space 1])
+    (* val op_one   : doc *)
+    let op_one = String "1"
+    (* val op_plus  : doc *)
+    let op_plus = Group (NOBOX, [String " +" ; space 1])
+    (* val op_zero  : doc *)
+    let op_zero = String "0"
+    (* val op_par   : doc *)
+    let op_par = Group (NOBOX, [String " |" ; space 1])
+    (* val op_top   : doc *)
+    let op_top = String "#T"
+    (* val op_with  : doc *)
+    let op_with = Group (NOBOX, [String " &" ; space 1])
+    (* val op_bot   : doc *)
+    let op_bot = String "#F"
+    (* val op_lto   : doc *)
+    let op_lto = Group (NOBOX, [String " -o" ; space 1])
+    (* val op_bang  : doc *)
+    let op_bang = String "!"
+    (* val op_qm    : doc *)
+    let op_qm = String "?"
+    (* val op_quant : quant -> doc *)
+    let op_quant = function
+      | All -> String "\\A"
+      | Ex -> String "\\E"
 
-  (* val src_l    : doc *)
-  let src_l = Group (NOBOX, [String "{src:" ; space 1])
-  (* val src_r    : doc *)
-  let src_r = String "}"
-  (* val snk_l    : doc *)
-  let snk_l = Group (NOBOX, [String "{snk:" ; space 1])
-  (* val snk_r    : doc *)
-  let snk_r = src_r
-  (* val cur_l    : doc *)
-  let cur_l = String "{"
-  (* val cur_r    : doc *)
-  let cur_r = src_r
-end)
+    (* val src_l    : doc *)
+    let src_l = Group (NOBOX, [String "{src:" ; space 1])
+    (* val src_r    : doc *)
+    let src_r = String "}"
+    (* val snk_l    : doc *)
+    let snk_l = Group (NOBOX, [String "{snk:" ; space 1])
+    (* val snk_r    : doc *)
+    let snk_r = src_r
+    (* val cur_l    : doc *)
+    let cur_l = String "{"
+    (* val cur_r    : doc *)
+    let cur_r = src_r
+  end)

@@ -1,3 +1,8 @@
+# Author: Kaustuv Chaudhuri <kaustuv.chaudhuri@inria.fr>
+# Copyright (C) 2013  Inria (Institut National de Recherche
+#                     en Informatique et en Automatique)
+# See LICENSE for licensing details.
+
 TARGET := profound
 
 OCB_FLAGS := -classic-display -j 4
