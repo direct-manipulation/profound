@@ -59,5 +59,6 @@ let _ =
       flag ["ocaml" ; "compile"] (A "-g") ;
       flag ["ocaml" ; "compile"] (S [A "-w" ; A "@3@5@6@8..12@14@20@26@28@29"]) ;
       flag ["ocaml" ; "native" ; "compile"] (A "-nodynlink") ;
+      ocaml_lib "pprint/src/PPrintLib" ;
   | _ -> ()
   end

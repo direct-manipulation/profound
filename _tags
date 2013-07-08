@@ -1,2 +1,4 @@
 true: use_menhir
 <*.ml*> or <*.native> or <*.byte> : package(unix), package(batteries), package(lablgtk2)
+<*.native> or <*.byte> : use_PPrintLib
+"pprint/src" : include

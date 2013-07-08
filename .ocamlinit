@@ -1,4 +1,4 @@
-(* -*- mode: typerex; -*- *)
+(* -*- mode: tuareg; -*- *)
 let __sys_int = !Sys.interactive ;;
 Sys.interactive := false ;;
 #use "topfind" ;;
@@ -7,6 +7,7 @@ Sys.interactive := false ;;
 #require "lablgtk2" ;;
 #require "batteries" ;;
 #directory "_build" ;;
+#directory "_build/pprint/src" ;;
 Sys.interactive := __sys_int ;;
 #load "profound.cma" ;;
 let pp_form ff f = Syntax_fmt.Src.pp_form ~cx:[] ff f ;;

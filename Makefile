@@ -25,5 +25,5 @@ clean:
 	${RM} version.ml
 
 top:
-	${MAKE} debug >/dev/null 2>&1
+	${MAKE} debug # >/dev/null 2>&1
 	OCAMLRUNPARAM=b ocaml
