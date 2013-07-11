@@ -5,17 +5,20 @@
 
 TARGET := profound
 
-OCB_FLAGS := -classic-display -j 4
+OCB_FLAGS := -classic-display
 
 OCB := _build/myocamlbuild -use-ocamlfind ${OCB_FLAGS}
 
 .PHONY: all debug clean top
 
-all: _build/myocamlbuild
+all: _build/myocamlbuild pprint/src
 	${OCB} -no-plugin ${TARGET}.native
 
 debug: all
 	${OCB} -no-plugin ${TARGET}.cma
+
+pprint/src:
+	git submodule update --init pprint
 
 _build/myocamlbuild: myocamlbuild.ml
 	ocamlbuild -just-plugin
@@ -25,5 +28,5 @@ clean:
 	${RM} version.ml
 
 top:
-	${MAKE} debug # >/dev/null 2>&1
+	${MAKE} debug >/dev/null 2>&1
 	OCAMLRUNPARAM=b ocaml

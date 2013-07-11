@@ -46,6 +46,7 @@ let parse_opts () =
   let opts = [
     "-i", String set_infile, "<file> Read theorem from <file>" ;
     "-v", Int set_verbosity, "<num> Set vebosity to <num>" ;
+    "-s", Set Syntax_fmt.display_sink_as_source, " Use the same colors for source and sink" ;
     "-log", String Log.to_file, "<file> Log output to file (default: stdout)" ;
     "-hist-lines", Int set_max_hist, "<num> Set the number of history lines to display to <num>" ;
     "-version", Unit (fun () ->

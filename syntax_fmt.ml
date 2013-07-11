@@ -5,6 +5,8 @@
  * See LICENSE for licensing details.
  *)
 
+(* options *)
+let display_sink_as_source = ref false
 
 open Batteries
 open Buffer
@@ -35,7 +37,6 @@ let explain = function
   | Must_be_unary -> "connective msut be unary"
 exception Fmt_failure of fmt_error
 let fmtfail err = raise (Fmt_failure err)
-
 
 let rec monoid ~conn ?un ~prec ~assoc es =
   begin match es with
@@ -172,10 +173,11 @@ struct
         Doc.(Appl (!!PREC_MIN, Prefix (q, fmt_form (x :: cx) f)))
     | Mark (m, f) ->
         let (ld, rd) =
-          begin match m with
-          | SRC -> (src_l, src_r)
-          | SNK -> (snk_l, snk_r)
-          | ARG -> (cur_l, cur_r)
+          if !display_sink_as_source then (cur_l, cur_r)
+          else begin match m with
+            | SRC -> (src_l, src_r)
+            | SNK -> (snk_l, snk_r)
+            | ARG -> (cur_l, cur_r)
           end in
         Doc.(Wrap (Opaque, ld, fmt_form cx f, rd))
     | Conn ((Bang | Qm | Qu _), _) ->
