@@ -11,6 +11,10 @@ open Syntax
 
 module F = Syntax_fmt
 
+let build_time =
+  let st = Unix.stat (Sys.executable_name) in
+  string_of_int (truncate st.Unix.st_mtime)
+
 exception Not_first_order
 
 let rec index_term cx = function
@@ -93,7 +97,7 @@ let load_file fin =
     try
       let mch = open_in_bin saven in
       if (Marshal.from_channel mch <> Version.str
-          || Marshal.from_channel mch <> Version.built
+          || Marshal.from_channel mch <> build_time
           || Marshal.from_channel mch <> magic)
       then begin
         Log.(log DEBUG "Magic numbers in %S do not match" saven) ;
@@ -120,7 +124,7 @@ let save_file fin hi =
   let saven = save_name fin in
   let mch = open_out_bin saven in
   Marshal.to_channel mch Version.str [] ;
-  Marshal.to_channel mch Version.built [] ;
+  Marshal.to_channel mch build_time [] ;
   Marshal.to_channel mch (Digest.file fin) [] ;
   Marshal.to_channel mch hi [] ;
   close_out mch ;

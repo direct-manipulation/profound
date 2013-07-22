@@ -50,7 +50,7 @@ let parse_opts () =
     "-log", String Log.to_file, "<file> Log output to file (default: stdout)" ;
     "-hist-lines", Int set_max_hist, "<num> Set the number of history lines to display to <num>" ;
     "-version", Unit (fun () ->
-        Printf.printf "Profound %s [build of %s]\n" Version.str Version.built ;
+        Printf.printf "Profound %s\n" Version.str ;
         exit 0
       ), " Display a version string" ;
     "-vnum", Unit (fun () ->
@@ -88,7 +88,7 @@ let parse_opts () =
 
 let main () =
   Log.to_stdout () ;
-  Log.(log INFO "Profound %s [%s] START" Version.str Version.built) ;
+  Log.(log INFO "Profound %s START" Version.str) ;
   let mode = parse_opts () in
   ignore (GMain.init ()) ;
   Log.(log INFO "GTK+ Initialized") ;
@@ -98,6 +98,6 @@ let main () =
 
 let () =
   if !Sys.interactive then
-    Printf.printf "Profound %s [%s]\n" Version.str Version.built
+    Printf.printf "Profound %s\n" Version.str
   else
     main ()
