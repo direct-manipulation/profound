@@ -1,3 +1,0 @@
-[submodule "pprint"]
-	path = pprint
-	url = git@github.com:chaudhuri/ocaml-pprint.git

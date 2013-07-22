@@ -11,14 +11,11 @@ OCB := _build/myocamlbuild -use-ocamlfind ${OCB_FLAGS}
 
 .PHONY: all debug clean top
 
-all: _build/myocamlbuild pprint/src
+all: _build/myocamlbuild
 	${OCB} -no-plugin ${TARGET}.native
 
 debug: all
 	${OCB} -no-plugin ${TARGET}.cma
-
-pprint/src:
-	git submodule update --init pprint
 
 _build/myocamlbuild: myocamlbuild.ml
 	ocamlbuild -just-plugin
