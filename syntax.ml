@@ -143,6 +143,7 @@ and _With_spec f g =
 let _Lto f g =
   begin match f, g with
   | Conn (Tens, []), _ -> g
+  | _, Conn (Lto, gs) -> Conn (Lto, f :: gs)
   | _ -> Conn (Lto, [f ; g])
   end
 
@@ -243,9 +244,13 @@ let unmark f =
   end
 
 module Fcx = struct
+  let monoidal = function
+    | Tens | Plus | Par | With -> true
+    | _ -> false
+
   let cons fr fcx =
     begin match Cx.front fcx with
-    | Some (hfr, fcx) when hfr.conn = fr.conn ->
+    | Some (hfr, fcx) when hfr.conn = fr.conn && monoidal fr.conn ->
         let fr = { fr with
                    left = hfr.left @ fr.left ;
                    right = hfr.right @ fr.right ;
@@ -256,7 +261,7 @@ module Fcx = struct
 
   let snoc fcx fr =
     begin match Cx.rear fcx with
-    | Some (fcx, rfr) when rfr.conn = fr.conn ->
+    | Some (fcx, rfr) when rfr.conn = fr.conn && monoidal fr.conn ->
         let fr = { rfr with
                    left = fr.left @ rfr.left ;
                    right = fr.right @ rfr.right ;

@@ -179,7 +179,7 @@ struct
             | SNK -> (snk_l, snk_r)
             | ARG -> (cur_l, cur_r)
           end in
-        Doc.(Wrap (Opaque, ld, fmt_form cx f, rd))
+        Doc.(Wrap (Transparent, ld, fmt_form cx f, rd))
     | Conn ((Bang | Qm | Qu _), _) ->
         fmtfail Must_be_unary
     | Subst (fcx, f) ->

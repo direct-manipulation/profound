@@ -9,7 +9,7 @@ open Ocamlbuild_plugin ;;
 
 let major = 0
 let minor = 4
-let patch = 2
+let patch = 3
 let tag   = ""
 
 (******************************************************************************)

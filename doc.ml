@@ -91,6 +91,11 @@ let rec ( >? ) prec be = match be with
   | Wrap (Transparent, _, be, _) -> prec >? be
   | _ -> false
 
+let rec ( >=? ) prec be = match be with
+  | Appl (subprec, _) when prec >= subprec -> true
+  | Wrap (Transparent, _, be, _) -> prec >=? be
+  | _ -> false
+
 let rec is_prefix = function
   | Appl (_, Prefix _) -> true
   | Wrap (Transparent, _, be, _) -> is_prefix be
@@ -181,7 +186,7 @@ let rec bracket ~ld ~rd = function
                      || infix_incompat_for Right prec asc r) in
           let ms = List.map
               begin fun e ->
-                [oprep ; delimit (bracket ~ld ~rd e) ~ld ~rd ~cond:(prec >? e)]
+                [oprep ; delimit (bracket ~ld ~rd e) ~ld ~rd ~cond:(prec >=? e)]
               end ms in
           let ms = List.concat ms in
           Group (HOV 0, l :: ms @ [oprep ; r])
