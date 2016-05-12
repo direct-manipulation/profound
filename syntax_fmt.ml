@@ -47,7 +47,11 @@ let rec monoid ~conn ?un ~prec ~assoc es =
       end
   | [_] ->
       fmtfail Cannot_be_unary
-  | es -> Doc.(Appl (prec, Infix (conn, assoc, es)))
+  | es ->
+      (* Doc.(Wrap (Opaque, String "(", *)
+      (*            Appl (prec, Infix (conn, assoc, es)), *)
+      (*            String ")")) *)
+      Doc.(Appl (prec, Infix (conn, assoc, es)))
   end
 
 module type SPEC = sig

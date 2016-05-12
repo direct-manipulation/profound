@@ -5,6 +5,10 @@
  * See LICENSE for licensing details.
  *)
 
+module Force = struct
+  (* open Form *)
+end
+
 open Batteries
 
 open Syntax

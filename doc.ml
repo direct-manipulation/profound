@@ -86,15 +86,15 @@ and bappl =
 
 and assoc = Left | Right | Non
 
-let rec ( >? ) prec be = match be with
-  | Appl (subprec, _) when prec > subprec -> true
-  | Wrap (Transparent, _, be, _) -> prec >? be
-  | _ -> false
-
 let rec ( >=? ) prec be = match be with
   | Appl (subprec, _) when prec >= subprec -> true
   | Wrap (Transparent, _, be, _) -> prec >=? be
   | _ -> false
+
+let rec ( >? ) prec be = match be with
+  | Atom _ -> false
+  | Wrap (_, _, be, _) -> prec >? be
+  | _ -> true
 
 let rec is_prefix = function
   | Appl (_, Prefix _) -> true

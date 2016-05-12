@@ -31,6 +31,7 @@ let log ?force lev fmt =
         then Some !logdest
         else None
     end in
+  let fmt = fmt ^^ "\n" in
   begin match ouch with
   | Some ch ->
       if lev >= ERROR then Printf.fprintf ch "[%s] " (lev_string lev) ;
